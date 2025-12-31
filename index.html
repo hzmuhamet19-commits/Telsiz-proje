@@ -72,84 +72,91 @@
         
         let peer;
         let localStream;
-        let connections = {};
+        let connections = {}; // Aktif bağlantılar
         const maxUsers = 5;
 
-        // URL kontrolü
+        // Eğer URL'de bilgi yoksa Setup ekranını göster
         if (!roomName || !myNo) {
             document.getElementById('setup').classList.add('visible');
         } else {
             initRadio();
         }
 
-        // --- DÜZELTİLEN KISIM BURASI ---
         function manualStart() {
             const r = document.getElementById('roomInput').value.trim();
             const u = document.getElementById('userInput').value;
             if(!r) return alert("Oda adı girin!");
-            
-            // Sayfa adresini bozmadan sadece parametre ekliyoruz
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?oda=' + r + '&no=' + u;
-            window.location.href = newUrl;
+            window.location.href = ?oda=${r}&no=${u};
         }
-        // -------------------------------
 
         function initRadio() {
             document.getElementById('radio-ui').style.display = 'flex';
             document.getElementById('setup').style.display = 'none';
             document.getElementById('room-display').innerText = Oda: ${roomName} | Ben: #${myNo};
             
-            const myBadge = document.getElementById(p${myNo});
-            if(myBadge) {
-                myBadge.style.background = '#007bff';
-                myBadge.style.opacity = '1';
-            }
+            // Kendi numaramızı listede mavi yapalım
+            document.getElementById(p${myNo}).style.background = '#007bff';
+            document.getElementById(p${myNo}).style.opacity = '1';
 
+            // ID Formatı: odaadi_numara (Örn: insaat_1)
             const myPeerId = ${roomName}_${myNo};
+            
             peer = new Peer(myPeerId);
 
+            // 1. Mikrofonu Al
             navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
                 localStream = stream;
-                localStream.getAudioTracks()[0].enabled = false;
+                localStream.getAudioTracks()[0].enabled = false; // Başta sessiz
                 activatePTT();
+                
+                // Diğer herkesi bulmaya çalış (Mesh Network)
                 connectToOthers();
+
             }).catch(err => {
-                document.getElementById('ptt-btn').innerText = "MİKROFON İZNİ YOK";
+                document.getElementById('ptt-btn').innerText = "MİKROFON HATASI";
                 document.getElementById('ptt-btn').style.borderColor = "red";
-                document.getElementById('ptt-btn').style.fontSize = "1rem";
             });
 
+            // 2. Gelen Aramaları Cevapla
             peer.on('call', (call) => {
                 call.answer(localStream);
                 setupCallEvents(call);
             });
-            
-            peer.on('error', err => { console.log(err); });
+
+            peer.on('error', err => console.log(err));
         }
 
+        // Diğer kullanıcıları sürekli dene (Otomatik Bağlantı)
         function connectToOthers() {
             for (let i = 1; i <= maxUsers; i++) {
-                if (i === myNo) continue;
+                if (i === myNo) continue; // Kendini arama
+                
                 const targetId = ${roomName}_${i};
+                
+                // Eğer zaten bağlı değilsek bağlanmayı dene
                 if (!connections[targetId]) {
                     const call = peer.call(targetId, localStream);
                     setupCallEvents(call, i);
                 }
             }
+            // 5 saniyede bir kopan veya yeni gelen var mı diye kontrol et
             setTimeout(connectToOthers, 5000);
         }
 
         function setupCallEvents(call, userNo) {
             const peerId = call.peer;
+            // ID'den numarayı çıkar (insaat_2 -> 2)
             const no = userNo || parseInt(peerId.split('_').pop());
 
             call.on('stream', (remoteStream) => {
+                // Eğer bu kişi için zaten audio elementi yoksa oluştur
                 if (!document.getElementById(audio_${no})) {
                     const audio = new Audio();
                     audio.id = audio_${no};
                     audio.srcObject = remoteStream;
                     audio.play();
                     
+                    // Arayüzde yeşil yak
                     const badge = document.getElementById(p${no});
                     if(badge) badge.classList.add('connected');
                     
@@ -159,15 +166,16 @@
             });
 
             call.on('close', () => {
-                const badge = document.getElementById(p${no});
-                if(badge) badge.classList.remove('connected');
+                document.getElementById(p${no}).classList.remove('connected');
                 delete connections[peerId];
                 const audio = document.getElementById(audio_${no});
                 if(audio) audio.remove();
             });
-            call.on('error', () => {});
+            
+            call.on('error', () => { /* Bağlantı hatası (henüz online değil) */ });
         }
 
+        // PTT (Bas Konuş) Mantığı
         const pttBtn = document.getElementById('ptt-btn');
 
         function activatePTT() {
@@ -192,6 +200,7 @@
             pttBtn.innerText = "BAS KONUŞ";
         };
 
+        // Event Listener'lar
         pttBtn.addEventListener('mousedown', startTalk);
         pttBtn.addEventListener('mouseup', stopTalk);
         pttBtn.addEventListener('mouseleave', stopTalk);
