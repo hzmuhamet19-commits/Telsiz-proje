@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Netlify Telsiz</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.2.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* Genel Sayfa Düzeni */
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden; /* Kaydırmayı engelle */
+        }
+
+        /* Giriş Ekranı */
+        #login-container {
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 25px;
+            border: none;
+            background: #333;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+        }
+
+        button.join-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 25px;
+            border: none;
+            background: linear-gradient(135deg, #007bff, #00d2ff);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        }
+
+        /* Telsiz Ekranı */
+        #radio-container {
+            display: none; /* Başlangıçta gizli */
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            justify-content: space-between;
+            padding: 20px 0;
+        }
+
+        /* Üst Bilgi Paneli */
+        .header-info {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .channel-badge {
+            background: #333;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* Kullanıcı Listesi */
+        .users-list {
+            width: 80%;
+            height: 150px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .user-row {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .online-dot {
+            width: 10px; height: 10px; background: #2ecc71; 
+            border-radius: 50%; margin-right: 10px;
+        }
+
+        /* BAS KONUŞ BUTONU (Devasa) */
+        #ptt-btn {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: #e74c3c;
+            border: 8px solid #c0392b;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 0 50px rgba(231, 76, 60, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none; /* Metin seçimini engelle */
+            -webkit-tap-highlight-color: transparent;
+            margin-bottom: 40px;
+            transition: all 0.1s;
+        }
+        
+        #ptt-btn i { font-size: 40px; margin-bottom: 10px; }
+
+        /* Konuşurken Butonun Hali */
+        #ptt-btn.talking {
+            background: #2ecc71;
+            border-color: #27ae60;
+            transform: scale(0.95);
+            box-shadow: 0 0 60px rgba(46, 204, 113, 0.6);
+        }
+
+        #status-text {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 20px;
+            height: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-container">
+        <h1 style="color: #00d2ff;"><i class="fas fa-walkie-talkie"></i> Telsiz</h1>
+        <p style="color: #aaa;">Lütfen kod adınızı girin.</p>
+        <input type="text" id="username" placeholder="Kod Adı / İsim" maxlength="15">
+        <button class="join-btn" onclick="startApp()">BAĞLAN</button>
+    </div>
+
+    <div id="radio-container">
+        <div class="header-info">
+            <h2 id="display-name" style="margin:0;">Kullanıcı</h2>
+            <span class="channel-badge">Kanal: GENEL</span>
+        </div>
+
+        <div class="users-list" id="users-box">
+            <div style="color:#666; font-size:12px; text-align:center;">Diğer kullanıcılar bekleniyor...</div>
+        </div>
+
+        <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+            <p id="status-text">Bağlantı bekleniyor...</p>
+            <button id="ptt-btn">
+                <i class="fas fa-microphone"></i>
+                <span>BAS KONUŞ</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // -------------------------------------------------
+        // AYARLAR (BURAYI DOLDURMAN ÇOK ÖNEMLİ)
+        // -------------------------------------------------
+        const APP_ID = "BURAYA_AGORA_APP_ID_YAZILACAK"; 
+        const CHANNEL = "telsiz_genel_kanal";
+        // -------------------------------------------------
+
+        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        let localTracks = { audioTrack: null };
+        let isTalking = false;
+
+        async function startApp() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) { alert("Lütfen bir isim yazın!"); return; }
+            if (APP_ID === "6c1a9a46487647f48ee2da13d30ee6e3") { alert("HATA: Kodun içindeki APP_ID kısmını doldurmadınız!"); return; }
+
+            // Arayüz Değiştir
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('radio-container').style.display = 'flex';
+            document.getElementById('display-name').innerText = username;
+            document.getElementById('status-text').innerText = "Bağlanılıyor...";
+
+            try {
+                // Mikrofon İzni İste
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                await localTracks.audioTrack.setEnabled(false); // Başlangıçta sessiz (MUTE)
+
+                // Agora'ya Katıl
+                // (Token kısmı null çünkü test modundayız, App ID yeterli)
+                await client.join(APP_ID, CHANNEL, null, username);
+                
+                document.getElementById('status-text').innerText = "Hazır. Konuşmak için basılı tut.";
+                addUserToUi(username, true); // Kendimizi listeye ekle
+
+                // Olayları Dinle (Başkası gelirse veya konuşursa)
+                setupEvents();
+                setupPTTButton();
+
+            } catch (error) {
+                console.error(error);
+                alert("Hata oluştu: " + error);
+                document.getElementById('status-text').innerText = "Bağlantı Hatası!";
+            }
+        }
+
+        function setupEvents() {
+            // Başkası kanala katıldığında veya ses açtığında
+            client.on("user-published", async (user, mediaType) => {
+                await client.subscribe(user, mediaType);
+                if (mediaType === "audio") {
+                    user.audioTrack.play(); // Sesi çal
+                    updateUserStatus(user.uid, "Konuşuyor...", true);
+                }
+            });
+
+            // Başkası sustuğunda
+            client.on("user-unpublished", (user) => {
+                updateUserStatus(user.uid, "Beklemede", false);
+            });
+
+            // Başkası kanala girdiğinde
+            client.on("user-joined", (user) => {
+                addUserToUi(user.uid, false);
+            });
+
+            // Başkası kanaldan çıktığında
+            client.on("user-left", (user) => {
+                removeUserFromUi(user.uid);
+            });
+        }
+
+        // Bas Konuş Buton Mantığı
+        function setupPTTButton() {
+            const btn = document.getElementById('ptt-btn');
+            const status = document.getElementById('status-text');
+
+            // Konuşmayı Başlat
+            const startTalking = async (e) => {
+                if(e.cancelable) e.preventDefault(); // Sayfa kaymasını önle
+                if (isTalking) return;
+
+                isTalking = true;
+                btn.classList.add('talking');
+                btn.querySelector('span').innerText = "KONUŞUYOR";
+                status.innerText = "Sesiniz iletiliyor...";
+                status.style.color = "#2ecc71";
+                
+                // Sesi Aç
+                if(localTracks.audioTrack) await localTracks.audioTrack.setEnabled(true);
+            };
+
+            // Konuşmayı Bitir
+            const stopTalking = async (e) => {
+                if(e.cancelable) e.preventDefault();
+                if (!isTalking) return;
+
+                isTalking = false;
+                btn.classList.remove('talking');
+                btn.querySelector('span').innerText = "BAS KONUŞ";
+                status.innerText = "Hazır";
+                status.style.color = "#888";
+
+                // Sesi Kapat
+                if(localTracks.audioTrack) await localTracks.audioTrack.setEnabled(false);
+            };
+
+            // Fare Olayları (PC)
+            btn.addEventListener('mousedown', startTalking);
+            btn.addEventListener('mouseup', stopTalking);
+            btn.addEventListener('mouseleave', stopTalking); // Butondan çıkarsa sussun
+
+            // Dokunmatik Olayları (Mobil)
+            btn.addEventListener('touchstart', startTalking, { passive: false });
+            btn.addEventListener('touchend', stopTalking, { passive: false });
+        }
+
+        // --- Arayüz Yardımcıları ---
+        function addUserToUi(name, isMe) {
+            const list = document.getElementById('users-box');
+            // Eğer "bekleniyor" yazısı varsa sil
+            if(list.innerText.includes("bekleniyor")) list.innerHTML = "";
+            
+            // Eğer zaten varsa ekleme
+            if(document.getElementById('u-'+name)) return;
+
+            const row = document.createElement('div');
+            row.className = 'user-row';
+            row.id = 'u-' + name;
+            row.innerHTML = `
+                <div class="online-dot"></div>
+                <div style="flex-grow:1; font-weight:bold;">${name} ${isMe ? '(Sen)' : ''}</div>
+                <div id="status-${name}" style="font-size:12px; color:#aaa;">Beklemede</div>
+            `;
+            list.appendChild(row);
+        }
+
+        function removeUserFromUi(name) {
+            const el = document.getElementById('u-' + name);
+            if(el) el.remove();
+        }
+
+        function updateUserStatus(name, text, isTalking) {
+            // Kullanıcı listede yoksa ekle (bazen joined gelmeden published gelebilir)
+            if(!document.getElementById('u-'+name)) addUserToUi(name, false);
+
+            const statusEl = document.getElementById('status-' + name);
+            const dotEl = document.querySelector(#u-${name} .online-dot);
+            
+            if(statusEl) statusEl.innerText = text;
+            if(dotEl) dotEl.style.backgroundColor = isTalking ? "#e74c3c" : "#2ecc71";
+            if(dotEl) dotEl.style.boxShadow = isTalking ? "0 0 10px #e74c3c" : "none";
+        }
+
+    </script>
+</body>
+</html>
