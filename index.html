@@ -177,4 +177,12 @@
 
         // Dokunmatik ve Fare Olayları
         btn.addEventListener('mousedown', startTalking);
-        btn.addEventListener
+        btn.addEventListener('mouseup', stopTalking);
+        btn.addEventListener('mouseleave', stopTalking);
+        
+        btn.addEventListener('touchstart', startTalking, { passive: false });
+        btn.addEventListener('touchend', stopTalking, { passive: false });
+
+    </script>
+</body>
+</html>
