@@ -3,239 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Süper Telsiz</title>
+    <title>Sorunsuz Telsiz</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; background-color: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; text-align: center; }
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
         
-        /* Giriş Ekranı */
-        #page-login { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 20px; }
-        .input-group { margin: 10px 0; }
-        input { padding: 15px; width: 80%; background: #222; border: 1px solid #555; color: white; border-radius: 5px; font-size: 18px; text-align: center; }
-        button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; width: 80%; font-weight: bold; }
+        /* GİRİŞ EKRANI */
+        #login-page { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 20px; z-index: 10; background: #000; }
+        .input-box { background: #111; padding: 20px; border-radius: 10px; border: 1px solid #333; }
+        input { padding: 15px; font-size: 20px; width: 80%; text-align: center; border-radius: 5px; border: none; margin-bottom: 10px; }
+        button.btn-main { padding: 15px; width: 90%; font-size: 18px; font-weight: bold; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         
-        /* Telsiz Ekranı */
-        #page-radio { display: none; flex-direction: column; height: 100%; }
-        .top-info { padding: 15px; background: #111; border-bottom: 1px solid #333; }
-        #status-log { font-size: 12px; color: #ffeb3b; min-height: 20px; margin-top: 5px; }
-        
-        .ptt-wrapper { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        /* TELSİZ EKRANI */
+        #radio-page { display: none; flex-direction: column; height: 100%; }
+        .top-status { padding: 15px; background: #222; border-bottom: 2px solid #444; }
+        .users-grid { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+        .u-dot { width: 15px; height: 15px; background: #444; border-radius: 50%; border: 2px solid #222; }
+        .u-dot.active { background: #0f0; box-shadow: 0 0 8px #0f0; }
+        .u-dot.me { border-color: #0af; }
+
+        /* PTT BUTONU */
+        .ptt-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
         #ptt-btn {
-            width: 70vw; height: 70vw; max-width: 300px; max-height: 300px;
-            border-radius: 50%; background: #222; border: 6px solid #444;
+            width: 70vw; height: 70vw; max-width: 280px; max-height: 280px;
+            border-radius: 50%; background: #222; border: 8px solid #333;
             color: #666; font-size: 24px; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
-            user-select: none; -webkit-user-select: none; touch-action: manipulation;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            user-select: none; touch-action: manipulation; -webkit-user-select: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
-        #ptt-btn.active { background: #c00; color: white; border-color: #f00; box-shadow: 0 0 50px #c00; transform: scale(0.95); }
-        
-        .conn-list { display: flex; justify-content: center; gap: 5px; margin-top: 5px; }
-        .dot { width: 10px; height: 10px; background: #333; border-radius: 50%; }
-        .dot.on { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        #ptt-btn.talking { background: #d00; border-color: #a00; color: white; transform: scale(0.95); box-shadow: 0 0 40px #d00; }
+
+        /* LOG KUTUSU (Hata ayıklamak için) */
+        #log-box { font-size: 10px; color: #aaa; height: 60px; overflow-y: scroll; background: #111; text-align: left; padding: 5px; border-top: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="page-login">
-        <h2>Telsiz v5</h2>
-        <p style="color:#aaa;">Oda ismi belirleyin.</p>
-        <div class="input-group">
-            <input type="text" id="roomInput" placeholder="Örn: insaat_34">
+    <div id="login-page">
+        <div class="input-box">
+            <h2>Telsiz v6</h2>
+            <p style="color:#aaa; font-size:14px;">Ortak bir Oda Adı girin.</p>
+            
+            <input type="text" id="roomInput" placeholder="Örn: test">
+            
+            <div style="margin: 10px 0; font-size: 12px; color: #f90;">
+                Arkadaşlarınızla <b>AYNI</b> kelimeyi yazdığınıza emin olun.
+            </div>
+
+            <button class="btn-main" onclick="startSystem()">BAĞLAN</button>
         </div>
-        <button onclick="startApp()">GİRİŞ YAP</button>
-        <p style="font-size:12px; color:#666; margin-top:20px;">
-            Önemli: "insaat" gibi basit isimler kullanmayın.<br>
-            Benzersiz bir isim yazın.
-        </p>
     </div>
 
-    <div id="page-radio">
-        <div class="top-info">
-            <div id="room-name" style="color:#0af; font-weight:bold;">...</div>
-            <div id="status-log">Bağlanıyor...</div>
-            <div class="conn-list">
-                <div id="u1" class="dot"></div>
-                <div id="u2" class="dot"></div>
-                <div id="u3" class="dot"></div>
-                <div id="u4" class="dot"></div>
-                <div id="u5" class="dot"></div>
+    <div id="radio-page">
+        <div class="top-status">
+            <h3 id="room-title" style="margin:0; color:#0af;">...</h3>
+            <div id="status-text" style="font-size:12px; color:#aaa; margin-top:5px;">Bağlanıyor...</div>
+            
+            <div class="users-grid">
+                <div id="led-1" class="u-dot"></div>
+                <div id="led-2" class="u-dot"></div>
+                <div id="led-3" class="u-dot"></div>
+                <div id="led-4" class="u-dot"></div>
+                <div id="led-5" class="u-dot"></div>
             </div>
         </div>
 
-        <div class="ptt-wrapper">
-            <div id="ptt-btn">BAŞLATILIYOR</div>
+        <div class="ptt-container">
+            <button id="ptt-btn" disabled>BAŞLATILIYOR...</button>
         </div>
+
+        <div id="log-box"></div>
+        <button onclick="location.reload()" style="background:#333; color:#fff; border:none; padding:10px;">Çıkış / Yenile</button>
     </div>
 
     <script>
+        // DEĞİŞKENLER
         let peer;
         let localStream;
-        let myId;
-        let myRoom;
+        let mySlot = 0;
+        let myRoomName = "";
         let connections = {};
+        
+        // Loglama Fonksiyonu
+        function log(msg) {
+            const box = document.getElementById('log-box');
+            box.innerHTML = <div>> ${msg}</div> + box.innerHTML;
+        }
 
-        function startApp() {
-            const r = document.getElementById('roomInput').value.trim();
-            if(!r) return alert("Oda ismi girin!");
-            
-            // Oda ismini temizle
-            myRoom = r.replace(/[^a-zA-Z0-9]/g, ''); 
-            
-            document.getElementById('page-login').style.display = 'none';
-            document.getElementById('page-radio').style.display = 'flex';
-            document.getElementById('room-name').innerText = "Oda: " + myRoom;
+        function startSystem() {
+            let baseName = document.getElementById('roomInput').value.trim().toLowerCase();
+            if(!baseName) return alert("Oda adı yazın!");
 
-            // Mikrofonu al, sonra bağlan
+            // Harf dışı karakterleri temizle
+            baseName = baseName.replace(/[^a-z0-9]/g, '');
+
+            // Rastgelelik eklemiyoruz, kullanıcı ne yazarsa o.
+            // ZOMBIE SORUNU ÇÖZÜMÜ:
+            // "Unavailable" hatası alırsak bir sonraki koltuğa geçeceğiz.
+            
+            myRoomName = baseName;
+
+            // Ekran değiştir
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('radio-page').style.display = 'flex';
+            document.getElementById('room-title').innerText = "Oda: " + myRoomName;
+
+            // Mikrofon izni al
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
-                localStream.getAudioTracks()[0].enabled = false;
+                localStream.getAudioTracks()[0].enabled = false; // Sessiz başla
                 
+                log("Mikrofon alındı.");
                 setupButton();
                 
-                // 1. Koltuktan itibaren dene
-                tryToJoin(1);
+                // BOŞ KOLTUK BULMAYA BAŞLA (1'den 5'e kadar dene)
+                tryRegister(1);
 
             }).catch(err => {
-                alert("Mikrofon izni verilmedi!");
-                document.getElementById('status-log').innerText = "Hata: Mikrofon izni yok.";
+                alert("Mikrofon izni şart!");
+                log("Hata: Mikrofon izni yok.");
             });
         }
 
-        // AKILLI BAĞLANTI (Unavailable Hatasını Çözen Kısım)
-        function tryToJoin(slotNumber) {
-            if(slotNumber > 10) { // 10 kere denediysek pes etmeyelim, rastgele girelim
-                joinAsGuest(); 
+        // --- ZOMBIE SAVAR SİSTEMİ ---
+        // Bu fonksiyon sırayla 1, 2, 3... numaralı koltuklara oturmayı dener.
+        // Eğer 1 doluysa (veya takılı kaldıysa) hata verir, biz de 2'yi deneriz.
+        function tryRegister(slotNum) {
+            if(slotNum > 5) {
+                alert("Bu oda tamamen dolu veya sunucu çok yoğun. Lütfen oda adının sonuna sayı ekleyip (örn: test99) tekrar deneyin.");
+                location.reload();
                 return;
             }
 
-            document.getElementById('status-log').innerText = "Koltuk #" + slotNumber + " deneniyor...";
+            document.getElementById('status-text').innerText = "Koltuk #" + slotNum + " kontrol ediliyor...";
+            log(Koltuk ${slotNum} deneniyor...);
+
+            // ID Formatı: odaadi_no (Örn: insaat_1)
+            const attemptId = myRoomName + "_" + slotNum;
             
-            const attemptId = myRoom + "_" + slotNumber;
-            
-            // Geçici Peer oluştur
-            // Eğer ID doluysa 'error' fırlatır, boşsa 'open' olur.
+            // Yeni bir PeerJS bağlantısı dene
             const tempPeer = new Peer(attemptId);
 
+            // BAŞARILI OLURSA
             tempPeer.on('open', (id) => {
-                // BAŞARILI! Koltuk boşmuş, yerleştik.
-                myId = id;
+                log(BAŞARILI! ID: ${id});
+                mySlot = slotNum;
                 peer = tempPeer;
-                document.getElementById('status-log').innerText = "Bağlandı: #" + slotNumber;
                 
-                // Işığı yak
-                updateDots(slotNumber);
+                // Durumu güncelle
+                document.getElementById('status-text').innerText = "Bağlandı: #" + mySlot;
                 
-                // Odayı dinlemeye başla
-                startListening();
-                
-                // Diğerlerini ara
-                connectToOthers(slotNumber);
+                // Kendi ışığımızı mavi yap
+                const myLed = document.getElementById('led-' + mySlot);
+                if(myLed) myLed.classList.add('me');
+
+                // Sistemi çalıştır
+                listenForCalls();
+                connectToOthers();
             });
 
+            // HATA OLURSA (Doluysa)
             tempPeer.on('error', (err) => {
-                // HATA! Koltuk dolu (Unavailable).
+                log(Hata (${err.type}): Koltuk ${slotNum} dolu.);
+                
                 if(err.type === 'unavailable-id') {
-                    console.log(slotNumber + " dolu, sonraki deneniyor...");
-                    tempPeer.destroy(); // Temizle
-                    setTimeout(() => tryToJoin(slotNumber + 1), 200); // 2. koltuğu dene
+                    // ID dolu, demek ki biri var (veya zombie).
+                    // Hemen bir sonrakini dene.
+                    tempPeer.destroy();
+                    tryRegister(slotNum + 1);
                 } else {
-                    document.getElementById('status-log').innerText = "Hata: " + err.type;
+                    // İnternet kopuk vs.
+                    log("Bağlantı hatası: " + err.type);
                 }
             });
         }
 
-        function joinAsGuest() {
-            // Eğer her yer doluysa rastgele isimle gir
-            const rnd = Math.floor(Math.random()*1000);
-            const guestId = myRoom + "guest" + rnd;
-            peer = new Peer(guestId);
-            
-            peer.on('open', () => {
-                document.getElementById('status-log').innerText = "Misafir olarak girildi (" + rnd + ")";
-                startListening();
-                connectToOthers(99); // Herkesi ara
-            });
-        }
-
-        function startListening() {
+        // GELEN ARAMALARI DİNLE
+        function listenForCalls() {
             peer.on('call', (call) => {
+                log("Biri arıyor...");
                 call.answer(localStream);
                 handleStream(call);
             });
         }
 
-        function connectToOthers(mySlot) {
-            // İlk 5 kişiyi ara
+        // DİĞERLERİNİ ARA
+        function connectToOthers() {
+            log("Diğerleri aranıyor...");
+            
+            // 1'den 5'e kadar herkesi ara (Kendin hariç)
             for(let i=1; i<=5; i++) {
                 if(i === mySlot) continue;
                 
-                const targetId = myRoom + "_" + i;
+                const targetId = myRoomName + "_" + i;
+                
+                // Zaten bağlı değilsek ara
                 if(!connections[targetId]) {
                     const call = peer.call(targetId, localStream);
-                    handleStream(call);
+                    handleStream(call, i);
                 }
             }
-            // 5 saniyede bir tekrar dene
-            setTimeout(() => connectToOthers(mySlot), 5000);
+            
+            // 5 saniyede bir tekrar tara (Yeni gelenleri bulmak için)
+            setTimeout(connectToOthers, 5000);
         }
 
-        function handleStream(call) {
+        // SES VE IŞIK YÖNETİMİ
+        function handleStream(call, manualIndex) {
+            // Karşı tarafın ID'sinden numarasını bul (oda_2 -> 2)
+            let peerId = call.peer;
+            let slot = manualIndex;
+            if(!slot && peerId) {
+                slot = parseInt(peerId.split('_').pop());
+            }
+
             call.on('stream', (remoteStream) => {
-                // Zaten oynatıyorsak tekrar ekleme
-                if(call.peer && connections[call.peer]) return;
-                
-                const audio = new Audio();
-                audio.srcObject = remoteStream;
-                audio.play().catch(e => console.log("Otomatik oynatma beklemede"));
-                
-                connections[call.peer] = true;
-                
-                // Görsel güncelleme (Basitçe 1. yeşil ışığı yak)
-                // Detaylı numara takibi karmaşık olur, sadece biri bağlandı diyelim
-                document.getElementById('status-log').innerText = "Bir kullanıcı bağlandı!";
-                document.getElementById('u1').classList.add('on');
+                if(!connections[call.peer]) { // Daha önce eklemediysek
+                    log(Ses bağlantısı: #${slot});
+                    
+                    const audio = new Audio();
+                    audio.srcObject = remoteStream;
+                    audio.play().catch(e => console.log("Otomatik oynatma engellendi"));
+                    
+                    // Işığı Yeşil Yap
+                    if(slot && document.getElementById('led-'+slot)) {
+                        document.getElementById('led-'+slot).classList.add('active');
+                    }
+                    
+                    connections[call.peer] = true;
+                }
             });
             
-            call.on('close', () => { delete connections[call.peer]; });
-            call.on('error', () => {});
+            call.on('close', () => {
+                log(Koptu: #${slot});
+                if(slot) document.getElementById('led-'+slot).classList.remove('active');
+                delete connections[call.peer];
+            });
+            
+            call.on('error', (e) => { /* Sessizce geç */ });
         }
 
-        function updateDots(num) {
-            // Kendi numaranı mavi yap (eğer 1-5 arasındaysa)
-            if(num <= 5) {
-                document.getElementById('u' + num).style.border = "2px solid #0af";
-            }
-        }
-
+        // BUTON AYARLARI
         function setupButton() {
             const btn = document.getElementById('ptt-btn');
+            btn.disabled = false;
             btn.innerText = "BAS KONUŞ";
             btn.style.color = "white";
 
-            const start = (e) => {
+            const startTalk = (e) => {
                 if(e.cancelable) e.preventDefault();
                 if(localStream) {
                     localStream.getAudioTracks()[0].enabled = true;
-                    btn.classList.add('active');
+                    btn.classList.add('talking');
                     btn.innerText = "YAYINDA";
                     if(navigator.vibrate) navigator.vibrate(50);
                 }
             };
-            const stop = (e) => {
+
+            const stopTalk = (e) => {
                 if(e.cancelable) e.preventDefault();
                 if(localStream) {
                     localStream.getAudioTracks()[0].enabled = false;
-                    btn.classList.remove('active');
+                    btn.classList.remove('talking');
                     btn.innerText = "BAS KONUŞ";
                 }
             };
 
-            btn.addEventListener('mousedown', start);
-            btn.addEventListener('mouseup', stop);
-            btn.addEventListener('mouseleave', stop);
-            btn.addEventListener('touchstart', start, {passive: false});
-            btn.addEventListener('touchend', stop, {passive: false});
+            btn.addEventListener('mousedown', startTalk);
+            btn.addEventListener('mouseup', stopTalk);
+            btn.addEventListener('mouseleave', stopTalk);
+            btn.addEventListener('touchstart', startTalk, {passive: false});
+            btn.addEventListener('touchend', stopTalk, {passive: false});
         }
     </script>
 </body>
