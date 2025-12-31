@@ -3,185 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telsiz</title>
-    <script src="[https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js](https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js)"></script>
+    <title>Hızlı Telsiz</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        /* GENEL AYARLAR */
+        body { margin: 0; padding: 0; background-color: #121212; color: white; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         /* GİRİŞ EKRANI */
-        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
-        input, select { padding: 15px; width: 80%; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
-        button { cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
-        .btn-start { background: #007bff; color: white; padding: 15px; width: 85%; font-size: 18px; }
-
-        /* TELSİZ EKRANI */
-        #radio-screen { display: none; flex-direction: column; height: 100%; }
-        .top-bar { padding: 15px; background: #333; }
-        .status-lights { display: flex; justify-content: center; gap: 5px; margin-top: 5px; }
-        .light { width: 30px; height: 30px; background: #555; border-radius: 50%; line-height: 30px; font-size: 12px; opacity: 0.5; }
-        .light.active { background: #28a745; opacity: 1; box-shadow: 0 0 10px #28a745; }
-
-        .center-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        #ekran-giris { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; z-index: 2; position: absolute; background: #121212; }
+        .kutu { background: #1e1e1e; padding: 20px; border-radius: 10px; width: 80%; max-width: 400px; text-align: center; border: 1px solid #333; }
+        input, select { width: 90%; padding: 15px; margin: 10px 0; background: #333; border: none; color: white; border-radius: 5px; font-size: 16px; }
+        .btn-basla { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; margin-top: 10px; cursor: pointer; }
         
-        /* KOCAMAN BAS KONUŞ BUTONU */
-        #ptt-btn {
-            width: 250px; height: 250px;
+        /* TELSİZ EKRANI */
+        #ekran-telsiz { display: none; flex-direction: column; height: 100%; width: 100%; }
+        .ust-bilgi { padding: 15px; background: #1f1f1f; text-align: center; border-bottom: 1px solid #333; }
+        .durum-isiklari { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+        .isik { width: 25px; height: 25px; background: #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #aaa; font-weight: bold; }
+        .isik.aktif { background: #28a745; color: white; box-shadow: 0 0 10px #28a745; }
+        .isik.ben { border: 2px solid #007bff; }
+
+        .orta-alan { flex-grow: 1; display: flex; justify-content: center; align-items: center; }
+        
+        /* BUTON TASARIMI */
+        #btn-ptt {
+            width: 75vw; height: 75vw;
+            max-width: 300px; max-height: 300px;
             border-radius: 50%;
-            background: #444; color: #aaa;
-            border: 10px solid #333;
-            font-size: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            user-select: none; -webkit-user-select: none; /* Telefonda seçimi engeller */
-            touch-action: manipulation;
+            background: #333; border: 8px solid #444;
+            color: #888; font-size: 24px; font-weight: bold;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            outline: none;
+            user-select: none; -webkit-user-select: none;
+            touch-action: manipulation; /* Mobilde gecikmeyi önler */
+            display: flex; align-items: center; justify-content: center;
         }
-        #ptt-btn.talking { background: #c0392b; color: white; border-color: #e74c3c; box-shadow: 0 0 50px #c0392b; }
+        #btn-ptt.basili { background: #d32f2f; border-color: #b71c1c; color: white; box-shadow: 0 0 40px #d32f2f; transform: scale(0.95); }
+        
+        /* Hata mesajı */
+        #hata-kutusu { position: fixed; top: 0; left: 0; width: 100%; background: #d32f2f; color: white; padding: 10px; text-align: center; display: none; z-index: 99; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <h2>Telsiz Giriş</h2>
-        <input type="text" id="roomName" placeholder="Oda Adı (Örn: santiye)">
-        <select id="userNo">
-            <option value="1">1. Kişi (Şef)</option>
-            <option value="2">2. Kişi</option>
-            <option value="3">3. Kişi</option>
-            <option value="4">4. Kişi</option>
-            <option value="5">5. Kişi</option>
-        </select>
-        <button class="btn-start" onclick="baslat()">BAĞLAN</button>
+    <div id="hata-kutusu">Hata Oluştu!</div>
+
+    <div id="ekran-giris">
+        <div class="kutu">
+            <h2>Telsiz Giriş</h2>
+            <input type="text" id="inp-oda" placeholder="Oda Adı (Örn: santiye)">
+            <select id="inp-no">
+                <option value="1">Kullanıcı 1 (Şef)</option>
+                <option value="2">Kullanıcı 2</option>
+                <option value="3">Kullanıcı 3</option>
+                <option value="4">Kullanıcı 4</option>
+                <option value="5">Kullanıcı 5</option>
+            </select>
+            <button class="btn-basla" onclick="baslat()">BAĞLAN</button>
+        </div>
     </div>
 
-    <div id="radio-screen">
-        <div class="top-bar">
-            <div id="info-txt">Bağlanıyor...</div>
-            <div class="status-lights">
-                <div id="l1" class="light">1</div>
-                <div id="l2" class="light">2</div>
-                <div id="l3" class="light">3</div>
-                <div id="l4" class="light">4</div>
-                <div id="l5" class="light">5</div>
+    <div id="ekran-telsiz">
+        <div class="ust-bilgi">
+            <div id="txt-bilgi" style="color:#00ffcc; font-weight:bold;">...</div>
+            <div class="durum-isiklari">
+                <div id="d1" class="isik">1</div>
+                <div id="d2" class="isik">2</div>
+                <div id="d3" class="isik">3</div>
+                <div id="d4" class="isik">4</div>
+                <div id="d5" class="isik">5</div>
             </div>
         </div>
 
-        <div class="center-area">
-            <button id="ptt-btn" disabled>YÜKLENİYOR</button>
+        <div class="orta-alan">
+            <div id="btn-ptt">BAŞLATILIYOR</div>
         </div>
         
-        <div style="padding:10px; color:#666; font-size:12px;">v3.0 - Hata Korumalı</div>
+        <div style="text-align: center; padding: 10px; color: #555; font-size: 12px;">v4.0 - Direct Mode</div>
     </div>
 
     <script>
-        // Hata yakalama
-        window.onerror = function(msg, url, line) {
-            alert("Hata Oluştu:\n" + msg + "\nSatır: " + line);
-        };
-
-        // Değişkenler
-        var peer;
-        var localStream;
-        var myPeerId;
-        var connections = {}; // Diğer kullanıcılarla bağlantılar
+        // Global Değişkenler
+        var peer = null;
+        var localStream = null;
+        var connections = {};
+        var myRoom = "";
+        var myNo = 0;
         
-        // URL Parametrelerini Kontrol Et (Linkle gelindiyse)
-        var params = new URLSearchParams(window.location.search);
-        var urlRoom = params.get('oda');
-        var urlNo = params.get('no');
-
-        if(urlRoom && urlNo) {
-            telsiziAc(urlRoom, urlNo);
-        }
-
-        // Giriş Butonuna Basılınca
+        // --- ADIM 1: BAŞLAT BUTONU ---
         function baslat() {
-            var r = document.getElementById('roomName').value.trim();
-            var n = document.getElementById('userNo').value;
-            if(!r) { alert("Oda adı boş olamaz!"); return; }
+            var oda = document.getElementById('inp-oda').value.trim();
+            var no = parseInt(document.getElementById('inp-no').value);
+
+            if (!oda) { alert("Lütfen bir oda adı yazın!"); return; }
+
+            // Giriş ekranını gizle, telsizi aç (Sayfa yenileme YOK)
+            document.getElementById('ekran-giris').style.display = 'none';
+            document.getElementById('ekran-telsiz').style.display = 'flex';
             
-            // Sayfayı yenileyerek parametre ekle (En temiz yöntem)
-            var cleanUrl = window.location.href.split('?')[0];
-            window.location.href = cleanUrl + "?oda=" + r + "&no=" + n;
+            telsiziKur(oda, no);
         }
 
-        function telsiziAc(room, no) {
-            // Ekran değiştir
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('radio-screen').style.display = 'flex';
-            document.getElementById('info-txt').innerText = "Oda: " + room + " | Ben: #" + no;
+        // --- ADIM 2: TELSİZ KURULUMU ---
+        function telsiziKur(oda, no) {
+            myRoom = oda;
+            myNo = no;
+
+            // Bilgileri ekrana yaz
+            document.getElementById('txt-bilgi').innerText = "Oda: " + oda + " | Kimlik: " + no;
             
-            // Kendi ışığımızı yakalım
-            document.getElementById('l' + no).style.backgroundColor = "#007bff";
-            document.getElementById('l' + no).style.opacity = "1";
+            // Kendi ışığımızı işaretle (Mavi çerçeve)
+            var myLight = document.getElementById('d' + no);
+            if(myLight) {
+                myLight.classList.add('ben');
+                myLight.style.backgroundColor = "#0056b3"; 
+                myLight.style.color = "white";
+            }
 
             // PeerJS Başlat
-            myPeerId = room + "_" + no;
-            peer = new Peer(myPeerId);
+            var myPeerId = oda + "_" + no;
+            
+            try {
+                peer = new Peer(myPeerId);
+            } catch (e) {
+                hataGoster("Peer Hatası: " + e);
+            }
 
-            // 1. Mikrofon İzni İste
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
-                localStream = stream;
-                localStream.getAudioTracks()[0].enabled = false; // Başta sesi kapat
-                
-                butonAktif();
-                digerleriniAra(room, no); // Diğerlerini bulmaya başla
-                
-            }).catch(function(err) {
-                alert("Mikrofon izni verilmedi! Telsiz çalışmaz.");
-                document.getElementById('ptt-btn').innerText = "İZİN YOK";
+            // Peer Olayları
+            peer.on('open', function(id) {
+                console.log('Bağlandı, ID:', id);
+                mikrofonuAc();
             });
 
-            // 2. Biri Bizi Ararsa (Bağlantı kabulü)
-            peer.on('call', function(call) {
-                call.answer(localStream); // Cevap ver
-                baglantiyiYonet(call);
-            });
-
-            // Hata olursa
             peer.on('error', function(err) {
                 console.log(err);
-                if(err.type === 'unavailable-id') {
-                    alert("Bu numara (#" + no + ") zaten odada var! Başka numara seç.");
-                    window.location.href = window.location.href.split('?')[0];
+                if (err.type === 'unavailable-id') {
+                    alert("Bu numara (" + no + ") şu an DOLU! Sayfayı yenileyip başka numara seçin.");
+                    location.reload();
+                } else {
+                    hataGoster("Bağlantı Hatası: " + err.type);
                 }
+            });
+
+            peer.on('call', function(call) {
+                // Biri aradığında cevap ver
+                call.answer(localStream);
+                baglantiyiKaydet(call);
             });
         }
 
-        // Diğer kullanıcıları (1'den 5'e kadar) sürekli ara
-        function digerleriniAra(room, myNo) {
-            for (var i = 1; i <= 5; i++) {
-                if (i == myNo) continue; // Kendini arama
+        // --- ADIM 3: MİKROFON ---
+        function mikrofonuAc() {
+            var btn = document.getElementById('btn-ptt');
+            
+            navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream) {
+                localStream = stream;
+                // Sesi başlangıçta kapat (Mute)
+                localStream.getAudioTracks()[0].enabled = false;
                 
-                var targetId = room + "_" + i;
-                if (!connections[targetId]) {
-                    var call = peer.call(targetId, localStream);
-                    baglantiyiYonet(call);
-                }
-            }
-            // 5 saniyede bir tekrar dene (Kopan olursa veya yeni gelen olursa)
-            setTimeout(function() { digerleriniAra(room, myNo); }, 5000);
+                // Butonu aktif et
+                btn.innerText = "BAS KONUŞ";
+                btn.style.color = "white";
+                btn.style.cursor = "pointer";
+                
+                // Dokunmatik olaylarını ekle
+                butonOlaylariniEkle(btn);
+                
+                // Diğerlerini aramaya başla
+                baglanDigerlerine();
+                
+            }).catch(function(err) {
+                hataGoster("Mikrofon izni verilmedi! Ayarlardan izin verin.");
+                btn.innerText = "İZİN YOK";
+                btn.style.color = "red";
+            });
         }
 
-        function baglantiyiYonet(call) {
-            var peerId = call.peer; // Örn: insaat_2
-            var userNo = peerId.split('_')[1]; // 2 numarasını al
+        // --- ADIM 4: BAĞLANTI YÖNETİMİ ---
+        function baglanDigerlerine() {
+            // 1'den 5'e kadar herkesi dene
+            for (var i = 1; i <= 5; i++) {
+                if (i === myNo) continue; // Kendini arama
+                
+                var hedefId = myRoom + "_" + i;
+                if (!connections[hedefId]) {
+                    var call = peer.call(hedefId, localStream);
+                    baglantiyiKaydet(call, i); // i numarasını manuel gönderiyoruz çünkü call objesinde hemen olmayabilir
+                }
+            }
+            // 5 saniyede bir tekrar dene
+            setTimeout(baglanDigerlerine, 5000);
+        }
+
+        function baglantiyiKaydet(call, manuelNo) {
+            var peerId = call.peer; 
+            // ID formatı: oda_no -> no'yu al
+            var numara = manuelNo || parseInt(peerId.split('_').pop());
 
             call.on('stream', function(remoteStream) {
-                // Ses etiketi oluştur (Eğer yoksa)
-                if (!document.getElementById('audio_' + userNo)) {
+                // Eğer ses elementi yoksa oluştur
+                if (!document.getElementById('ses_' + numara)) {
                     var audio = new Audio();
-                    audio.id = 'audio_' + userNo;
+                    audio.id = 'ses_' + numara;
                     audio.srcObject = remoteStream;
-                    audio.play().catch(e => console.log("Otomatik oynatma beklemede"));
+                    audio.play().catch(e => console.log("Otomatik oynatma tarayıcı tarafından durduruldu"));
                     
-                    // Işığı yeşil yak
-                    var light = document.getElementById('l' + userNo);
-                    if(light) {
-                        light.classList.add('active');
-                        connections[peerId] = true;
-                    }
+                    // Işığı Yak (Yeşil)
+                    var el = document.getElementById('d' + numara);
+                    if(el) el.classList.add('aktif');
+                    
+                    connections[peerId] = true;
                 }
             });
 
             call.on('close', function() {
-                // Bağlantı koparsa ışığı söndür
-                var light = document.getElementById('l'
+                var el = document.getElementById('d' + numara);
+                if(el) el.classList.remove('aktif');
+                delete connections[peerId];
+                var au = document.getElementById('ses_' + numara);
+                if(au) au.remove();
+            });
+            
+            call.on('error', function() {}); // Sessizce geç
+        }
+
+        // --- ADIM 5: DOKUNMATİK BUTON (PTT) ---
+        function butonOlaylariniEkle(btn) {
+            
+            function konus(e) {
+                if(e.cancelable) e.preventDefault(); // Kaydırmayı engelle
+                if(!localStream) return;
+                
+                localStream.getAudioTracks()[0].enabled = true; // Sesi AÇ
+                btn.classList.add('basili');
+                btn.innerText = "YAYINDA";
+                if(navigator.vibrate) navigator.vibrate(50);
+            }
+
+            function sus(e) {
+                if(e.cancelable) e.preventDefault();
+                if(!localStream) return;
+                
+                localStream.getAudioTracks()[0].enabled = false; // Sesi KAPAT
+                btn.classList.remove('basili');
+                btn.innerText = "BAS KONUŞ";
+            }
+
+            // Mouse (Bilgisayar)
+            btn.addEventListener('mousedown', konus);
+            btn.addEventListener('mouseup', sus);
+            btn.addEventListener('mouseleave', sus);
+
+            // Dokunmatik (Telefon)
+            btn.addEventListener('touchstart', konus, {passive: false});
+            btn.addEventListener('touchend', sus, {passive: false});
+        }
+
+        function hataGoster(msg) {
+            var h = document.getElementById('hata-kutusu');
+            h.innerText = msg;
+            h.style.display = 'block';
+            setTimeout(function() { h.style.display = 'none'; }, 5000);
+        }
+    </script>
+</body>
+</html>
