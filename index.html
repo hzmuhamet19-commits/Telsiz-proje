@@ -3,119 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agora Ses Testi (Kolay Mod)</title>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.2.js"></script>
+    <title>Grup Telsizi (5 Kişi)</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; background-color: #f9f9f9; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
-        label { font-weight: bold; display: block; text-align: left; margin-left: 5%; }
-        button { padding: 12px 30px; font-size: 16px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; color: white; width: 45%; }
-        #join-btn { background-color: #28a745; }
-        #leave-btn { background-color: #dc3545; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #status { margin-top: 15px; font-weight: bold; padding: 10px; }
-        .error-log { color: red; font-size: 12px; text-align: left; background: #ffe6e6; padding: 10px; margin-top: 10px; display: none; }
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; padding: 10px; display: flex; flex-direction: column; height: 95vh; }
+        .header { margin-bottom: 10px; }
+        .status-box { background: #333; padding: 10px; border-radius: 5px; font-size: 0.85em; display: flex; justify-content: space-around; flex-wrap: wrap; }
+        .peer-item { padding: 5px 10px; margin: 2px; border-radius: 4px; background: #555; opacity: 0.5; }
+        .peer-item.connected { background: #28a745; opacity: 1; font-weight: bold; color: white; }
+        
+        /* Büyük PTT Butonu */
+        .ptt-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        .btn-ptt { 
+            width: 80vw; height: 80vw; max-width: 300px; max-height: 300px;
+            border-radius: 50%; border: 8px solid #444;
+            background: #333; color: #aaa; font-size: 1.5em; font-weight: bold;
+            user-select: none; -webkit-user-select: none; touch-action: manipulation;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); outline: none;
+            transition: all 0.1s;
+        }
+        .btn-ptt.active { background: #e74c3c; color: white; border-color: #c0392b; box-shadow: 0 0 40px #e74c3c; transform: scale(0.95); }
+        .btn-ptt:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        .setup-screen { display: none; margin-top: 50px; }
+        .setup-screen.visible { display: block; }
+        input, select { padding: 10px; border-radius: 5px; border: none; margin: 5px; width: 80%; }
+        button.start-btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 80%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Agora Ses Paneli</h2>
-    
-    <label>App ID:</label>
-    <input type="text" id="appid" placeholder="App ID'yi buraya yapıştır">
+    <div id="setup" class="setup-screen">
+        <h2>Telsiz Kurulum</h2>
+        <input type="text" id="roomInput" placeholder="Oda Adı (Örn: insaat)">
+        <select id="userInput">
+            <option value="1">Kullanıcı 1 (Şef)</option>
+            <option value="2">Kullanıcı 2</option>
+            <option value="3">Kullanıcı 3</option>
+            <option value="4">Kullanıcı 4</option>
+            <option value="5">Kullanıcı 5</option>
+        </select>
+        <button class="start-btn" onclick="manualStart()">GİRİŞ YAP</button>
+        <p style="font-size:0.8em; color:#888;">veya linkin sonuna ?oda=x&no=1 ekleyin.</p>
+    </div>
 
-    <label>Token:</label>
-    <input type="text" id="token" placeholder="Uzun Token kodunu buraya yapıştır">
+    <div id="radio-ui" style="display:none; height:100%; flex-direction:column;">
+        <div class="header">
+            <h3 id="room-display" style="margin:5px 0; color:#00ffcc">...</h3>
+            <div class="status-box" id="peers-list">
+                <span id="p1" class="peer-item">1</span>
+                <span id="p2" class="peer-item">2</span>
+                <span id="p3" class="peer-item">3</span>
+                <span id="p4" class="peer-item">4</span>
+                <span id="p5" class="peer-item">5</span>
+            </div>
+        </div>
 
-    <label>Kanal Adı:</label>
-    <input type="text" id="channel" value="test" placeholder="Kanal adı (örn: test)">
+        <div class="ptt-container">
+            <button id="ptt-btn" class="btn-ptt" disabled>BAĞLANIYOR</button>
+        </div>
+        <p id="log" style="color:#666; font-size:0.7em; margin-top: auto;">Sistem Hazır.</p>
+    </div>
 
-    <br>
-    <button id="join-btn">BAĞLAN 📞</button>
-    <button id="leave-btn" disabled>AYRIL ❌</button>
-
-    <div id="status">Durum: Bilgileri girip bağlanın.</div>
-    <div id="debug-log" class="error-log"></div>
-</div>
-
-<script>
-    const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-    let localAudioTrack;
-
-    document.getElementById("join-btn").onclick = async function () {
-        // Kutucuklardan verileri al
-        const appId = document.getElementById("appid").value.trim();
-        const token = document.getElementById("token").value.trim();
-        const channel = document.getElementById("channel").value.trim();
-
-        if (!appId || !token || !channel) {
-            alert("Lütfen tüm alanları doldurun!");
-            return;
-        }
-
-        document.getElementById("join-btn").disabled = true;
-        document.getElementById("status").innerText = "Bağlanılıyor...";
-
-        try {
-            // Odaya Katıl
-            await client.join(appId, channel, token, null);
-            
-            // Mikrofonu Aç
-            localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-            await client.publish([localAudioTrack]);
-
-            // Başarılı
-            document.getElementById("status").innerText = "✅ BAĞLANDI! Ses gidiyor.";
-            document.getElementById("status").style.color = "green";
-            document.getElementById("leave-btn").disabled = false;
-            document.getElementById("debug-log").style.display = "none";
-
-        } catch (error) {
-            console.error(error);
-            document.getElementById("status").innerText = "❌ HATA OLUŞTU";
-            document.getElementById("status").style.color = "red";
-            document.getElementById("join-btn").disabled = false;
-            
-            // Hatayı ekrana bas
-            const debugDiv = document.getElementById("debug-log");
-            debugDiv.style.display = "block";
-            debugDiv.innerText = "Hata Detayı:\n" + error.message;
-
-            if(error.code === "INVALID_TOKEN") {
-                alert("Token geçersiz! Lütfen kopyalarken tam aldığından emin ol.");
-            }
-        }
-    };
-
-    document.getElementById("leave-btn").onclick = async function () {
-        if (localAudioTrack) {
-            localAudioTrack.close();
-            localAudioTrack = null;
-        }
-        await client.leave();
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        let roomName = params.get('oda');
+        let myNo = parseInt(params.get('no'));
         
-        document.getElementById("status").innerText = "🔴 Ayrıldı.";
-        document.getElementById("status").style.color = "black";
-        document.getElementById("join-btn").disabled = false;
-        document.getElementById("leave-btn").disabled = true;
-    };
+        let peer;
+        let localStream;
+        let connections = {};
+        const maxUsers = 5;
 
-    // Karşı taraf gelince sesi çal
-    client.on("user-published", async (user, mediaType) => {
-        await client.subscribe(user, mediaType);
-        if (mediaType === "audio") {
-            user.audioTrack.play();
-            document.getElementById("status").innerText = "🗣️ Karşı tarafın sesi geliyor!";
+        // URL kontrolü
+        if (!roomName || !myNo) {
+            document.getElementById('setup').classList.add('visible');
+        } else {
+            initRadio();
         }
-    });
-    
-    client.on("user-unpublished", async (user) => {
-        document.getElementById("status").innerText = "✅ Bağlı (Karşı taraf sustu/ayrıldı)";
-    });
 
-</script>
+        // --- DÜZELTİLEN KISIM BURASI ---
+        function manualStart() {
+            const r = document.getElementById('roomInput').value.trim();
+            const u = document.getElementById('userInput').value;
+            if(!r) return alert("Oda adı girin!");
+            
+            // Sayfa adresini bozmadan sadece parametre ekliyoruz
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?oda=' + r + '&no=' + u;
+            window.location.href = newUrl;
+        }
+        // -------------------------------
 
+        function initRadio() {
+            document.getElementById('radio-ui').style.display = 'flex';
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('room-display').innerText = Oda: ${roomName} | Ben: #${myNo};
+            
+            const myBadge = document.getElementById(p${myNo});
+            if(myBadge) {
+                myBadge.style.background = '#007bff';
+                myBadge.style.opacity = '1';
+            }
+
+            const myPeerId = ${roomName}_${myNo};
+            peer = new Peer(myPeerId);
+
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                localStream = stream;
+                localStream.getAudioTracks()[0].enabled = false;
+                activatePTT();
+                connectToOthers();
+            }).catch(err => {
+                document.getElementById('ptt-btn').innerText = "MİKROFON İZNİ YOK";
+                document.getElementById('ptt-btn').style.borderColor = "red";
+                document.getElementById('ptt-btn').style.fontSize = "1rem";
+            });
+
+            peer.on('call', (call) => {
+                call.answer(localStream);
+                setupCallEvents(call);
+            });
+            
+            peer.on('error', err => { console.log(err); });
+        }
+
+        function connectToOthers() {
+            for (let i = 1; i <= maxUsers; i++) {
+                if (i === myNo) continue;
+                const targetId = ${roomName}_${i};
+                if (!connections[targetId]) {
+                    const call = peer.call(targetId, localStream);
+                    setupCallEvents(call, i);
+                }
+            }
+            setTimeout(connectToOthers, 5000);
+        }
+
+        function setupCallEvents(call, userNo) {
+            const peerId = call.peer;
+            const no = userNo || parseInt(peerId.split('_').pop());
+
+            call.on('stream', (remoteStream) => {
+                if (!document.getElementById(audio_${no})) {
+                    const audio = new Audio();
+                    audio.id = audio_${no};
+                    audio.srcObject = remoteStream;
+                    audio.play();
+                    
+                    const badge = document.getElementById(p${no});
+                    if(badge) badge.classList.add('connected');
+                    
+                    connections[peerId] = true;
+                    document.getElementById('log').innerText = #${no} Bağlandı.;
+                }
+            });
+
+            call.on('close', () => {
+                const badge = document.getElementById(p${no});
+                if(badge) badge.classList.remove('connected');
+                delete connections[peerId];
+                const audio = document.getElementById(audio_${no});
+                if(audio) audio.remove();
+            });
+            call.on('error', () => {});
+        }
+
+        const pttBtn = document.getElementById('ptt-btn');
+
+        function activatePTT() {
+            pttBtn.disabled = false;
+            pttBtn.innerText = "BAS KONUŞ";
+            pttBtn.style.color = "white";
+        }
+
+        const startTalk = (e) => {
+            e.preventDefault();
+            if(!localStream) return;
+            localStream.getAudioTracks()[0].enabled = true;
+            pttBtn.classList.add('active');
+            pttBtn.innerText = "YAYINDA";
+        };
+
+        const stopTalk = (e) => {
+            e.preventDefault();
+            if(!localStream) return;
+            localStream.getAudioTracks()[0].enabled = false;
+            pttBtn.classList.remove('active');
+            pttBtn.innerText = "BAS KONUŞ";
+        };
+
+        pttBtn.addEventListener('mousedown', startTalk);
+        pttBtn.addEventListener('mouseup', stopTalk);
+        pttBtn.addEventListener('mouseleave', stopTalk);
+        pttBtn.addEventListener('touchstart', startTalk, {passive: false});
+        pttBtn.addEventListener('touchend', stopTalk, {passive: false});
+    </script>
 </body>
 </html>
