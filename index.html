@@ -3,181 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kolay Telsiz</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>Kolay Grup Telsiz</title>
+    
+    <script src="https://muazkhan.com:9001/dist/RTCMultiConnection.min.js"></script>
+    <script src="https://muazkhan.com:9001/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        body { background-color: #2c3e50; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { background-color: #212121; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
         
-        /* Kart Tasarımı */
-        .card { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; width: 90%; max-width: 350px; }
+        /* Giriş Kartı */
+        #login-card { background: #333; padding: 30px; border-radius: 20px; width: 85%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        input { width: 70%; padding: 10px; border-radius: 5px; border: none; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+        input { width: 100%; padding: 15px; margin: 15px 0; border-radius: 30px; border: none; background: #444; color: white; font-size: 16px; text-align: center; outline: none; box-sizing: border-box; }
         
-        /* Butonlar */
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; margin: 5px; }
-        .btn-green { background: #27ae60; }
-        .btn-blue { background: #2980b9; }
-
-        /* ID Göstergesi */
-        .my-id-box { background: #fff; color: #333; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 18px; border: 2px dashed #e67e22; word-break: break-all;}
+        button.join-btn { width: 100%; padding: 15px; border-radius: 30px; border: none; background: linear-gradient(45deg, #ff9800, #ff5722); color: white; font-size: 18px; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
+        button.join-btn:active { transform: scale(0.95); }
 
         /* Telsiz Ekranı */
-        #radio-screen { display: none; }
+        #radio-screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 0; }
+        
+        .channel-info { font-size: 14px; color: #aaa; background: #333; padding: 5px 15px; border-radius: 15px; margin-top: 10px; }
         
         /* BAS KONUŞ BUTONU */
         #ptt-btn { 
-            width: 200px; height: 200px; border-radius: 50%; 
-            background: #c0392b; border: 8px solid #96281b; 
-            color: white; font-size: 24px; font-weight: bold; 
-            margin-top: 20px; cursor: pointer; 
+            width: 240px; height: 240px; border-radius: 50%; 
+            background: #d32f2f; border: 8px solid #b71c1c; 
+            color: white; font-size: 26px; font-weight: bold; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            user-select: none; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            user-select: none; -webkit-tap-highlight-color: transparent; cursor: pointer;
+            box-shadow: 0 0 50px rgba(211, 47, 47, 0.4);
+            transition: all 0.1s;
         }
-        #ptt-btn:active, #ptt-btn.talking { background: #2ecc71; border-color: #27ae60; transform: scale(0.95); }
         
-        .status { margin-top: 15px; font-size: 14px; color: #bdc3c7; }
+        #ptt-btn.talking { 
+            background: #43a047; border-color: #2e7d32; 
+            transform: scale(0.95); 
+            box-shadow: 0 0 60px rgba(67, 160, 71, 0.6);
+        }
+        
+        #status-text { margin-bottom: 30px; font-size: 16px; color: #888; font-weight: 500; height: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="card">
-        <h2><i class="fas fa-satellite-dish"></i> Bağlantı Kur</h2>
+    <div id="login-card">
+        <h1 style="margin:0 0 10px 0; color:#ff9800;"><i class="fas fa-broadcast-tower"></i> Telsiz</h1>
+        <p style="color:#bbb; font-size:14px;">Herkes aynı oda ismini yazsın.</p>
         
-        <p>Senin Numaran:</p>
-        <div class="my-id-box" id="my-id">Yükleniyor...</div>
-        <p style="font-size:12px; color:#bdc3c7;">Bu numarayı arkadaşına ver.</p>
-        
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0;">
-
-        <p>Arkadaşının Numarası:</p>
-        <input type="text" id="friend-id" placeholder="Onun numarasını buraya gir">
-        <button class="btn btn-green" onclick="connectToFriend()">BAĞLAN</button>
+        <input type="text" id="room-id" placeholder="Oda Adı (Örn: Takım1)" value="GenelKanal">
+        <button class="join-btn" onclick="joinRoom()">ODAYA GİR</button>
     </div>
 
     <div id="radio-screen">
-        <h3><i class="fas fa-walkie-talkie"></i> Telsiz Hattı</h3>
-        <div class="status" id="connection-status">Bağlandı!</div>
-        
+        <div>
+            <h2 id="room-display" style="margin:0;">Oda: ...</h2>
+            <div class="channel-info"><i class="fas fa-users"></i> Grup Modu Aktif</div>
+        </div>
+
         <button id="ptt-btn">
-            <i class="fas fa-microphone" style="font-size:40px; margin-bottom:10px;"></i>
+            <i class="fas fa-microphone-alt" style="font-size:50px; margin-bottom:10px;"></i>
             <span>BAS KONUŞ</span>
         </button>
-        
-        <br>
-        <button class="btn btn-blue" onclick="location.reload()">Kapat</button>
+
+        <div id="status-text">Hazır</div>
     </div>
 
-    <audio id="remote-audio" autoplay></audio>
-
     <script>
-        let peer = null;
-        let conn = null;
-        let localStream = null;
-        let currentCall = null;
+        var connection = new RTCMultiConnection();
         
-        // 1. PeerJS Başlat (Rastgele ID alır)
-        function init() {
-            peer = new Peer(); // Hiçbir ayar yok, otomatik cloud server
+        // Ücretsiz genel sunucu kullanıyoruz (Üyelik gerekmez)
+        connection.socketURL = 'https://muazkhan.com:9001/';
+        
+        connection.session = {
+            audio: true,
+            video: false, // Sadece ses
+            data: false
+        };
 
-            peer.on('open', (id) => {
-                document.getElementById('my-id').innerText = id;
-            });
+        connection.mediaConstraints = {
+            audio: true,
+            video: false
+        };
 
-            // Biri bizi ararsa
-            peer.on('call', (call) => {
-                navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-                    localStream = stream;
-                    muteMic(); // Başta sessiz
-                    call.answer(stream); // Cevap ver
-                    setupCall(call);
-                    showRadioScreen();
-                });
-            });
+        connection.sdpConstraints.mandatory = {
+            OfferToReceiveAudio: true,
+            OfferToReceiveVideo: false
+        };
 
-            peer.on('error', (err) => {
-                alert("Hata: " + err.type);
+        // Bağlanınca ne olsun?
+        connection.onstream = function(event) {
+            var audio = event.mediaElement;
+            audio.id = event.streamid;
+            // Gelen sesi otomatik oynat (Gizli)
+            document.body.appendChild(audio);
+        };
+
+        // Kendi mikrofonumuz açılınca (İlk başta sessize al)
+        connection.onstreamended = function(event) {
+            var mediaElement = document.getElementById(event.streamid);
+            if (mediaElement) mediaElement.parentNode.removeChild(mediaElement);
+        };
+
+        // --- BAS KONUŞ MANTIĞI ---
+        var localStream = null;
+        var isTalking = false;
+
+        function joinRoom() {
+            var roomID = document.getElementById('room-id').value.trim();
+            if (!roomID) { alert("Lütfen bir oda adı yazın!"); return; }
+
+            // Arayüzü Değiştir
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('radio-screen').style.display = 'flex';
+            document.getElementById('room-display').innerText = "Oda: " + roomID;
+            document.getElementById('status-text').innerText = "Bağlanılıyor...";
+
+            // Odayı aç veya katıl
+            connection.openOrJoin(roomID, function(isRoomExist, roomid) {
+                document.getElementById('status-text').innerText = "Bağlandı! Konuşmak için bas.";
+                
+                // Mikrofon izni alınınca hemen sesi kapat (MUTE)
+                // Çünkü telsizde sadece basınca ses gitmeli.
+                if(connection.attachStreams.length > 0) {
+                    localStream = connection.attachStreams[0];
+                    localStream.mute('audio'); 
+                }
             });
         }
+        
+        // Sonradan katılanlar için mikrofonu yakala ve sessize al
+        connection.onMediaError = function(e) { alert("Mikrofon izni ver!"); };
+        connection.onstream = function(event) {
+            if (event.type === 'local') {
+                localStream = event.stream;
+                localStream.mute('audio'); // Kendi sesini başta kapat
+            } else {
+                document.body.appendChild(event.mediaElement); // Gelen sesi oynat
+            }
+        };
 
-        // 2. Biz birini ararsak
-        function connectToFriend() {
-            const friendId = document.getElementById('friend-id').value.trim();
-            if (!friendId) return alert("Arkadaşının numarasını girmelisin!");
+        // Buton Ayarları
+        var btn = document.getElementById('ptt-btn');
+        var statusText = document.getElementById('status-text');
 
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-                localStream = stream;
-                muteMic(); // Başta sessiz
-                const call = peer.call(friendId, stream);
-                setupCall(call);
-                showRadioScreen();
-            }).catch(err => {
-                alert("Mikrofon izni vermen lazım!");
-            });
-        }
+        function startTalking(e) {
+            if(e.cancelable) e.preventDefault();
+            if(!localStream) return;
+            if(isTalking) return;
 
-        // 3. Çağrı Kurulumu (Ses gelip gitmesi)
-        function setupCall(call) {
-            currentCall = call;
-            call.on('stream', (remoteStream) => {
-                const audioEl = document.getElementById('remote-audio');
-                audioEl.srcObject = remoteStream;
-                audioEl.play().catch(e => console.log("Oynatma hatası, ekrana dokun"));
-                document.getElementById('connection-status').innerText = "Ses Hattı Açık 🟢";
-            });
+            isTalking = true;
+            localStream.unmute('audio'); // SESİ AÇ
             
-            call.on('close', () => {
-                alert("Bağlantı koptu");
-                location.reload();
-            });
+            btn.classList.add('talking');
+            btn.querySelector('span').innerText = "KONUŞUYOR";
+            statusText.innerText = "Sesin İletiliyor... 📡";
+            statusText.style.color = "#43a047";
         }
 
-        // 4. Bas Konuş Mantığı
-        function setupPTT() {
-            const btn = document.getElementById('ptt-btn');
-            const status = document.getElementById('connection-status');
+        function stopTalking(e) {
+            if(e.cancelable) e.preventDefault();
+            if(!localStream) return;
+            if(!isTalking) return;
 
-            const startTalk = (e) => {
-                e.preventDefault();
-                if (localStream) {
-                    localStream.getAudioTracks()[0].enabled = true; // Sesi aç
-                    btn.classList.add('talking');
-                    btn.querySelector('span').innerText = "KONUŞUYOR";
-                    status.innerText = "Sesin gidiyor... 🔊";
-                }
-            };
-
-            const stopTalk = (e) => {
-                e.preventDefault();
-                if (localStream) {
-                    localStream.getAudioTracks()[0].enabled = false; // Sesi kapat
-                    btn.classList.remove('talking');
-                    btn.querySelector('span').innerText = "BAS KONUŞ";
-                    status.innerText = "Dinlemede 👂";
-                }
-            };
-
-            btn.addEventListener('mousedown', startTalk);
-            btn.addEventListener('mouseup', stopTalk);
-            btn.addEventListener('touchstart', startTalk, {passive: false});
-            btn.addEventListener('touchend', stopTalk, {passive: false});
+            isTalking = false;
+            localStream.mute('audio'); // SESİ KAPAT
+            
+            btn.classList.remove('talking');
+            btn.querySelector('span').innerText = "BAS KONUŞ";
+            statusText.innerText = "Hazır";
+            statusText.style.color = "#888";
         }
 
-        function showRadioScreen() {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('radio-screen').style.display = 'block';
-        }
-
-        function muteMic() {
-            if(localStream) localStream.getAudioTracks()[0].enabled = false;
-        }
-
-        // Başlat
-        init();
-        setupPTT();
-
-    </script>
-</body>
-</html>
+        // Dokunmatik ve Fare Olayları
+        btn.addEventListener('mousedown', startTalking);
+        btn.addEventListener
