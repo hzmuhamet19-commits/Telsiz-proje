@@ -2,109 +2,78 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netlify Telsiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sesli Görüşme Testi</title>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.2.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <style>
-        body { background-color: #121212; color: white; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #login-container { width: 90%; max-width: 350px; }
-        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 25px; border: none; font-size: 16px; text-align: center; }
-        button.join-btn { width: 100%; padding: 15px; border-radius: 25px; border: none; background: #007bff; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
-        #radio-container { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
-        #ptt-btn { width: 200px; height: 200px; border-radius: 50%; background: #e74c3c; border: 8px solid #c0392b; color: white; font-size: 24px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; margin-top: 20px; }
-        #ptt-btn.talking { background: #2ecc71; border-color: #27ae60; transform: scale(0.95); }
-        .status { margin-top: 20px; color: #888; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px; cursor: pointer; }
+        #status { margin-top: 20px; color: green; font-weight: bold; }
+        .error { color: red; }
     </style>
 </head>
 <body>
 
-    <div id="login-container">
-        <h2>Telsiz Giriş</h2>
-        <input type="text" id="username" placeholder="İsminizi Yazın">
-        <button class="join-btn" onclick="startApp()">BAĞLAN</button>
-    </div>
+    <h2>Agora Ses Testi</h2>
+    <p>Aşağıdaki butona basarak odaya katılın.</p>
+    
+    <button id="join-btn">Konuşmaya Başla (Join)</button>
+    <button id="leave-btn" disabled>Ayrıl (Leave)</button>
 
-    <div id="radio-container">
-        <h2 id="display-name"></h2>
-        <button id="ptt-btn">BAS KONUŞ</button>
-        <p class="status" id="status-text">Bağlantı bekleniyor...</p>
-    </div>
+    <div id="status">Durum: Bekleniyor...</div>
 
     <script>
-        // SENİN ID'Nİ BURAYA SABİTLEDİM:
-        var APP_ID = "c5153a39412540988c2ec8aec50f96e7"; 
-        var CHANNEL = "genel_kanal";
-        
-        var client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        var localTracks = { audioTrack: null };
-        var isTalking = false;
+        // --- AYARLAR ---
+        // Agora Panelinden aldığın bilgileri buraya gireceksin:
+        const APP_ID = "70dad3e486194c39846e86a26911868b"; 
+        const TOKEN = "b3f32630b7de4903bd42be5a63e7e44c";
+        const CHANNEL_NAME = "test"; // Token oluştururken girdiğin kanal adı ile AYNI olmalı.
+        // ----------------
 
-        async function startApp() {
-            var username = document.getElementById('username').value;
-            if (username == "") { alert("İsim yazmalısın!"); return; }
+        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        let localAudioTrack;
 
-            // Ekranı değiştir
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('radio-container').style.display = 'flex';
-            document.getElementById('display-name').innerText = username;
-            document.getElementById('status-text').innerText = "Sunucuya bağlanılıyor...";
-
+        document.getElementById("join-btn").onclick = async function () {
             try {
-                // Mikrofonu aç
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                await localTracks.audioTrack.setEnabled(false); // Başta sessiz
-
-                // Agora'ya bağlan
-                await client.join(APP_ID, CHANNEL, null, username);
+                // Odaya Katıl
+                await client.join(APP_ID, CHANNEL_NAME, TOKEN, null);
                 
-                document.getElementById('status-text').innerText = "Hazır! Konuşmak için butona basılı tut.";
+                // Mikrofonu al ve yayınla
+                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                await client.publish([localAudioTrack]);
 
-                // Olayları dinle
-                client.on("user-published", async function(user, mediaType) {
-                    await client.subscribe(user, mediaType);
-                    if (mediaType === "audio") {
-                        user.audioTrack.play();
-                    }
-                });
-
-                setupButton();
+                document.getElementById("status").innerText = "Durum: Bağlandı! Ses gidiyor.";
+                document.getElementById("join-btn").disabled = true;
+                document.getElementById("leave-btn").disabled = false;
+                
+                console.log("Başarıyla bağlanıldı.");
 
             } catch (error) {
-                alert("Hata oluştu: " + error);
                 console.error(error);
+                document.getElementById("status").innerText = "Hata: " + error.code + " - " + error.message;
+                document.getElementById("status").className = "error";
             }
-        }
+        };
 
-        function setupButton() {
-            var btn = document.getElementById('ptt-btn');
-            var status = document.getElementById('status-text');
+        document.getElementById("leave-btn").onclick = async function () {
+            // Yayını durdur ve çık
+            localAudioTrack.close();
+            await client.leave();
+            
+            document.getElementById("status").innerText = "Durum: Ayrıldı.";
+            document.getElementById("join-btn").disabled = false;
+            document.getElementById("leave-btn").disabled = true;
+        };
 
-            function start() {
-                if (isTalking) return;
-                isTalking = true;
-                localTracks.audioTrack.setEnabled(true);
-                btn.style.backgroundColor = "#2ecc71"; // Yeşil
-                btn.innerText = "KONUŞUYOR";
-                status.innerText = "Sesiniz gidiyor...";
+        // Başka biri katıldığında sesini çal
+        client.on("user-published", async (user, mediaType) => {
+            await client.subscribe(user, mediaType);
+            if (mediaType === "audio") {
+                const remoteAudioTrack = user.audioTrack;
+                remoteAudioTrack.play();
+                console.log("Karşı tarafın sesi geliyor.");
             }
-
-            function stop() {
-                if (!isTalking) return;
-                isTalking = false;
-                localTracks.audioTrack.setEnabled(false);
-                btn.style.backgroundColor = "#e74c3c"; // Kırmızı
-                btn.innerText = "BAS KONUŞ";
-                status.innerText = "Hazır";
-            }
-
-            // Olaylar (PC ve Mobil)
-            btn.addEventListener('mousedown', start);
-            btn.addEventListener('mouseup', stop);
-            btn.addEventListener('touchstart', function(e) { e.preventDefault(); start(); });
-            btn.addEventListener('touchend', function(e) { e.preventDefault(); stop(); });
-        }
+        });
     </script>
 </body>
 </html>
