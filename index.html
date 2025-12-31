@@ -3,76 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sesli Görüşme Testi</title>
+    <title>Ses Testi - Detaylı</title>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.2.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; }
-        button { padding: 10px 20px; font-size: 16px; margin: 10px; cursor: pointer; }
-        #status { margin-top: 20px; color: green; font-weight: bold; }
-        .error { color: red; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:disabled { background: #ccc; }
+        #status { margin-top: 20px; font-weight: bold; font-size: 18px; }
+        #console-log { 
+            text-align: left; background: #f4f4f4; border: 1px solid #ddd; 
+            padding: 10px; margin-top: 20px; height: 200px; overflow-y: scroll; font-family: monospace; font-size: 12px;
+        }
+        .log-info { color: blue; }
+        .log-success { color: green; }
+        .log-error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>Agora Ses Testi</h2>
-    <p>Aşağıdaki butona basarak odaya katılın.</p>
+    <h2>Sesli Görüşme (Hata Ayıklama Modu)</h2>
     
-    <button id="join-btn">Konuşmaya Başla (Join)</button>
-    <button id="leave-btn" disabled>Ayrıl (Leave)</button>
+    <button id="join-btn">BAĞLAN</button>
+    <button id="leave-btn" disabled>AYRIL</button>
 
-    <div id="status">Durum: Bekleniyor...</div>
+    <div id="status">Durum: Hazır</div>
+    
+    <h3>İşlem Kayıtları (Log):</h3>
+    <div id="console-log"></div>
 
     <script>
-        // --- AYARLAR ---
-        // Agora Panelinden aldığın bilgileri buraya gireceksin:
-        const APP_ID = "70dad3e486194c39846e86a26911868b"; 
-        const TOKEN = "b3f32630b7de4903bd42be5a63e7e44c";
-        const CHANNEL_NAME = "test"; // Token oluştururken girdiğin kanal adı ile AYNI olmalı.
-        // ----------------
+        // --- BURAYI DİKKATLİ DOLDUR ---
+        const APP_ID = "6c1a9a46487647f48ee2da13d30ee6e3"; 
+        const TOKEN = "cf3db68661f74bcaac640ff8e2071bad";
+        const CHANNEL_NAME = "test"; // Token alırken yazdığın ismin AYNISI olmalı
+        // ------------------------------
 
         const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         let localAudioTrack;
 
-        document.getElementById("join-btn").onclick = async function () {
-            try {
-                // Odaya Katıl
-                await client.join(APP_ID, CHANNEL_NAME, TOKEN, null);
-                
-                // Mikrofonu al ve yayınla
-                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                await client.publish([localAudioTrack]);
+        // Ekrana yazı yazdırma fonksiyonu
+        function logToScreen(message, type = "info") {
+            const logDiv = document.getElementById("console-log");
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "log-" + type;
+            msgDiv.innerText = "> " + message;
+            logDiv.appendChild(msgDiv);
+            console.log(message);
+        }
 
-                document.getElementById("status").innerText = "Durum: Bağlandı! Ses gidiyor.";
-                document.getElementById("join-btn").disabled = true;
-                document.getElementById("leave-btn").disabled = false;
+        document.getElementById("join-btn").onclick = async function () {
+            document.getElementById("join-btn").disabled = true;
+            document.getElementById("status").innerText = "Durum: Bağlanılıyor...";
+            logToScreen("Bağlantı işlemi başlatıldı...", "info");
+
+            try {
+                // 1. Adım: Odaya Katılma
+                logToScreen(Agora'ya bağlanılıyor... AppID: ${APP_ID.substr(0,5)}... Kanal: ${CHANNEL_NAME}, "info");
                 
-                console.log("Başarıyla bağlanıldı.");
+                await client.join(APP_ID, CHANNEL_NAME, TOKEN, null);
+                logToScreen("Agora sunucusuna başarıyla girildi!", "success");
+
+                // 2. Adım: Mikrofon İzni
+                logToScreen("Mikrofon izni isteniyor...", "info");
+                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                logToScreen("Mikrofon erişimi sağlandı.", "success");
+
+                // 3. Adım: Sesi Yayınlama
+                await client.publish([localAudioTrack]);
+                logToScreen("Ses yayını başladı! Konuşabilirsiniz.", "success");
+
+                document.getElementById("status").innerText = "Durum: BAĞLI - SES GİDİYOR";
+                document.getElementById("status").style.color = "green";
+                document.getElementById("leave-btn").disabled = false;
 
             } catch (error) {
-                console.error(error);
-                document.getElementById("status").innerText = "Hata: " + error.code + " - " + error.message;
-                document.getElementById("status").className = "error";
+                // HATA BURADA YAZACAK
+                document.getElementById("status").innerText = "Durum: HATA OLUŞTU";
+                document.getElementById("status").style.color = "red";
+                document.getElementById("join-btn").disabled = false;
+                
+                logToScreen("HATA KODU: " + error.code, "error");
+                logToScreen("HATA MESAJI: " + error.message, "error");
+                
+                if (error.code === "CAN_NOT_GET_GATEWAY_SERVER") {
+                    logToScreen("Çözüm: Token hatalı veya internet bağlantısı yok.", "error");
+                }
+                if (error.code === "INVALID_TOKEN") {
+                    logToScreen("Çözüm: Token geçersiz. App Certificate açıkken token zorunludur.", "error");
+                }
+                if (error.toString().includes("NotAllowedError")) {
+                    logToScreen("Çözüm: Mikrofon iznini reddettiniz veya site HTTPS değil.", "error");
+                }
             }
         };
 
         document.getElementById("leave-btn").onclick = async function () {
-            // Yayını durdur ve çık
-            localAudioTrack.close();
+            if(localAudioTrack) {
+                localAudioTrack.close();
+                logToScreen("Mikrofon kapatıldı.", "info");
+            }
             await client.leave();
+            logToScreen("Odadan ayrıldınız.", "info");
             
-            document.getElementById("status").innerText = "Durum: Ayrıldı.";
+            document.getElementById("status").innerText = "Durum: Ayrıldı";
             document.getElementById("join-btn").disabled = false;
             document.getElementById("leave-btn").disabled = true;
         };
 
-        // Başka biri katıldığında sesini çal
         client.on("user-published", async (user, mediaType) => {
             await client.subscribe(user, mediaType);
+            logToScreen("Kullanıcı bağlandı: " + user.uid, "success");
             if (mediaType === "audio") {
-                const remoteAudioTrack = user.audioTrack;
-                remoteAudioTrack.play();
-                console.log("Karşı tarafın sesi geliyor.");
+                user.audioTrack.play();
+                logToScreen("Karşı tarafın sesi çalınıyor.", "success");
             }
+        });
+
+        client.on("user-unpublished", (user) => {
+             logToScreen("Kullanıcı yayını kesti: " + user.uid, "info");
         });
     </script>
 </body>
