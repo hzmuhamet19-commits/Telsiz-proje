@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sorunsuz Telsiz</title>
+    <title>Sorunsuz Telsiz v7</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; text-align: center; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
@@ -34,7 +34,7 @@
         }
         #ptt-btn.talking { background: #d00; border-color: #a00; color: white; transform: scale(0.95); box-shadow: 0 0 40px #d00; }
 
-        /* LOG KUTUSU (Hata ayıklamak için) */
+        /* LOG KUTUSU */
         #log-box { font-size: 10px; color: #aaa; height: 60px; overflow-y: scroll; background: #111; text-align: left; padding: 5px; border-top: 1px solid #333; }
     </style>
 </head>
@@ -42,15 +42,11 @@
 
     <div id="login-page">
         <div class="input-box">
-            <h2>Telsiz v6</h2>
+            <h2>Telsiz v7</h2>
             <p style="color:#aaa; font-size:14px;">Ortak bir Oda Adı girin.</p>
             
-            <input type="text" id="roomInput" placeholder="Örn: test">
+            <input type="text" id="roomInput" placeholder="Örn: santiye34">
             
-            <div style="margin: 10px 0; font-size: 12px; color: #f90;">
-                Arkadaşlarınızla <b>AYNI</b> kelimeyi yazdığınıza emin olun.
-            </div>
-
             <button class="btn-main" onclick="startSystem()">BAĞLAN</button>
         </div>
     </div>
@@ -74,18 +70,15 @@
         </div>
 
         <div id="log-box"></div>
-        <button onclick="location.reload()" style="background:#333; color:#fff; border:none; padding:10px;">Çıkış / Yenile</button>
     </div>
 
     <script>
-        // DEĞİŞKENLER
         let peer;
         let localStream;
         let mySlot = 0;
         let myRoomName = "";
         let connections = {};
         
-        // Loglama Fonksiyonu
         function log(msg) {
             const box = document.getElementById('log-box');
             box.innerHTML = <div>> ${msg}</div> + box.innerHTML;
@@ -95,29 +88,19 @@
             let baseName = document.getElementById('roomInput').value.trim().toLowerCase();
             if(!baseName) return alert("Oda adı yazın!");
 
-            // Harf dışı karakterleri temizle
             baseName = baseName.replace(/[^a-z0-9]/g, '');
-
-            // Rastgelelik eklemiyoruz, kullanıcı ne yazarsa o.
-            // ZOMBIE SORUNU ÇÖZÜMÜ:
-            // "Unavailable" hatası alırsak bir sonraki koltuğa geçeceğiz.
-            
             myRoomName = baseName;
 
-            // Ekran değiştir
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('radio-page').style.display = 'flex';
             document.getElementById('room-title').innerText = "Oda: " + myRoomName;
 
-            // Mikrofon izni al
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
-                localStream.getAudioTracks()[0].enabled = false; // Sessiz başla
+                localStream.getAudioTracks()[0].enabled = false;
                 
                 log("Mikrofon alındı.");
                 setupButton();
-                
-                // BOŞ KOLTUK BULMAYA BAŞLA (1'den 5'e kadar dene)
                 tryRegister(1);
 
             }).catch(err => {
@@ -126,12 +109,9 @@
             });
         }
 
-        // --- ZOMBIE SAVAR SİSTEMİ ---
-        // Bu fonksiyon sırayla 1, 2, 3... numaralı koltuklara oturmayı dener.
-        // Eğer 1 doluysa (veya takılı kaldıysa) hata verir, biz de 2'yi deneriz.
         function tryRegister(slotNum) {
             if(slotNum > 5) {
-                alert("Bu oda tamamen dolu veya sunucu çok yoğun. Lütfen oda adının sonuna sayı ekleyip (örn: test99) tekrar deneyin.");
+                alert("Bu oda dolu. Lütfen oda isminin sonuna sayı ekleyin.");
                 location.reload();
                 return;
             }
@@ -139,112 +119,76 @@
             document.getElementById('status-text').innerText = "Koltuk #" + slotNum + " kontrol ediliyor...";
             log(Koltuk ${slotNum} deneniyor...);
 
-            // ID Formatı: odaadi_no (Örn: insaat_1)
             const attemptId = myRoomName + "_" + slotNum;
-            
-            // Yeni bir PeerJS bağlantısı dene
             const tempPeer = new Peer(attemptId);
 
-            // BAŞARILI OLURSA
             tempPeer.on('open', (id) => {
                 log(BAŞARILI! ID: ${id});
                 mySlot = slotNum;
                 peer = tempPeer;
                 
-                // Durumu güncelle
                 document.getElementById('status-text').innerText = "Bağlandı: #" + mySlot;
-                
-                // Kendi ışığımızı mavi yap
                 const myLed = document.getElementById('led-' + mySlot);
                 if(myLed) myLed.classList.add('me');
 
-                // Sistemi çalıştır
                 listenForCalls();
                 connectToOthers();
             });
 
-            // HATA OLURSA (Doluysa)
             tempPeer.on('error', (err) => {
-                log(Hata (${err.type}): Koltuk ${slotNum} dolu.);
-                
                 if(err.type === 'unavailable-id') {
-                    // ID dolu, demek ki biri var (veya zombie).
-                    // Hemen bir sonrakini dene.
                     tempPeer.destroy();
                     tryRegister(slotNum + 1);
                 } else {
-                    // İnternet kopuk vs.
                     log("Bağlantı hatası: " + err.type);
                 }
             });
         }
 
-        // GELEN ARAMALARI DİNLE
         function listenForCalls() {
             peer.on('call', (call) => {
-                log("Biri arıyor...");
                 call.answer(localStream);
                 handleStream(call);
             });
         }
 
-        // DİĞERLERİNİ ARA
         function connectToOthers() {
-            log("Diğerleri aranıyor...");
-            
-            // 1'den 5'e kadar herkesi ara (Kendin hariç)
             for(let i=1; i<=5; i++) {
                 if(i === mySlot) continue;
-                
                 const targetId = myRoomName + "_" + i;
-                
-                // Zaten bağlı değilsek ara
                 if(!connections[targetId]) {
                     const call = peer.call(targetId, localStream);
                     handleStream(call, i);
                 }
             }
-            
-            // 5 saniyede bir tekrar tara (Yeni gelenleri bulmak için)
             setTimeout(connectToOthers, 5000);
         }
 
-        // SES VE IŞIK YÖNETİMİ
         function handleStream(call, manualIndex) {
-            // Karşı tarafın ID'sinden numarasını bul (oda_2 -> 2)
-            let peerId = call.peer;
             let slot = manualIndex;
-            if(!slot && peerId) {
-                slot = parseInt(peerId.split('_').pop());
-            }
+            if(!slot && call.peer) slot = parseInt(call.peer.split('_').pop());
 
             call.on('stream', (remoteStream) => {
-                if(!connections[call.peer]) { // Daha önce eklemediysek
+                if(!connections[call.peer]) {
                     log(Ses bağlantısı: #${slot});
-                    
                     const audio = new Audio();
                     audio.srcObject = remoteStream;
                     audio.play().catch(e => console.log("Otomatik oynatma engellendi"));
                     
-                    // Işığı Yeşil Yap
                     if(slot && document.getElementById('led-'+slot)) {
                         document.getElementById('led-'+slot).classList.add('active');
                     }
-                    
                     connections[call.peer] = true;
                 }
             });
             
             call.on('close', () => {
-                log(Koptu: #${slot});
                 if(slot) document.getElementById('led-'+slot).classList.remove('active');
                 delete connections[call.peer];
             });
-            
-            call.on('error', (e) => { /* Sessizce geç */ });
+            call.on('error', (e) => {});
         }
 
-        // BUTON AYARLARI
         function setupButton() {
             const btn = document.getElementById('ptt-btn');
             btn.disabled = false;
