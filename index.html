@@ -2,78 +2,178 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hızlı Telsiz v15</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Telsiz v16</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background-color: #000; color: white; font-family: sans-serif; text-align: center; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        /* GİRİŞ EKRANI */
-        #login-panel { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 10px; z-index: 10; background: #000; }
-        
-        input { 
-            padding: 15px; width: 80%; margin: 0 auto 20px auto; 
-            border-radius: 10px; border: 2px solid #007bff; 
-            background: #222; color: white; font-size: 20px; text-align: center; 
+        /* MODERN RESET VE FONTLAR */
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            text-align: center; margin: 0; display: flex; flex-direction: column; 
+            height: 100vh; overflow: hidden; 
+        }
+
+        /* GİRİŞ EKRANI TASARIMI */
+        #login-panel { 
+            display: flex; flex-direction: column; justify-content: center; 
+            height: 100%; padding: 20px; z-index: 10; 
+            backdrop-filter: blur(10px);
         }
         
-        .grid-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+        h2 { 
+            font-weight: 300; letter-spacing: 2px; text-transform: uppercase; 
+            margin-bottom: 30px; color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5);
+        }
+
+        /* Şık Input Alanı */
+        input { 
+            padding: 15px; width: 100%; max-width: 300px; margin: 0 auto 30px auto; 
+            border-radius: 50px; border: 2px solid rgba(255,255,255,0.1); 
+            background: rgba(255,255,255,0.05); color: white; 
+            font-size: 20px; text-align: center; transition: 0.3s;
+        }
+        input:focus { border-color: #00d2ff; background: rgba(255,255,255,0.1); }
+        
+        /* Koltuk Seçim Butonları */
+        .grid-buttons { 
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; 
+            max-width: 400px; margin: 0 auto;
+        }
         
         .btn-big { 
-            padding: 25px; background: #1b5e20; color: white; 
-            border: 2px solid #4caf50; border-radius: 10px; 
-            font-size: 18px; cursor: pointer; font-weight: bold;
+            padding: 20px; 
+            background: rgba(255, 255, 255, 0.05); 
+            color: #ccc; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 15px; 
+            font-size: 16px; cursor: pointer; font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        .btn-big:active { transform: scale(0.95); }
+        .btn-big:hover { background: rgba(255,255,255,0.1); color: white; border-color: #00d2ff; }
         
         /* TELSİZ EKRANI */
         #radio-panel { display: none; flex-direction: column; height: 100%; }
         
-        .video-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 5px; flex-grow: 1; align-content: flex-start; }
+        /* Üst Bilgi Barı */
+        .top-bar {
+            padding: 15px; background: rgba(0,0,0,0.3); 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .room-badge { 
+            background: rgba(0, 210, 255, 0.2); color: #00d2ff; 
+            padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;
+        }
+        .refresh-btn {
+            background: none; border: 1px solid rgba(255,255,255,0.2); 
+            color: #aaa; padding: 5px 10px; border-radius: 5px; font-size: 10px; cursor: pointer;
+        }
+
+        /* Video Grid */
+        .video-grid { 
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; 
+            padding: 10px; flex-grow: 1; align-content: flex-start; overflow-y: auto;
+        }
         
         .vid-box { 
-            width: 45%; height: 120px; background: #111; border: 1px solid #333; position: relative; 
-            display: flex; align-items: center; justify-content: center;
+            width: 48%; height: 130px; 
+            background: rgba(0,0,0,0.3); border-radius: 12px; 
+            position: relative; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
         }
         
-        /* DONMAYI ENGELLEYEN CSS AYARI: Görüntü küçük olsun */
         video { 
             width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); 
-            filter: contrast(1.2); /* Düşük kaliteyi netleştir */
+            filter: contrast(1.1);
         }
         
-        .vid-box.talking { border: 3px solid #0f0; }
-        .label { position: absolute; bottom: 0; left: 0; background: rgba(0,0,0,0.7); font-size: 10px; padding: 2px; }
-
-        /* BUTON */
-        .ptt-zone { height: 200px; display: flex; align-items: center; justify-content: center; background: #111; border-top: 2px solid #333; }
-        #main-btn {
-            width: 150px; height: 150px; border-radius: 50%;
-            background: #333; border: 5px solid #555;
-            color: #aaa; font-size: 20px; font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
-            user-select: none; -webkit-user-select: none;
+        /* Konuşma Efekti */
+        .vid-box.talking { 
+            border-color: #00ff88; 
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); 
         }
-        #main-btn.active { background: #d00; border-color: red; color: white; }
+        
+        .label { 
+            position: absolute; bottom: 5px; left: 5px; 
+            background: rgba(0,0,0,0.6); color: white;
+            font-size: 10px; padding: 3px 8px; border-radius: 10px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* ALT KONTROL ALANI */
+        .ptt-zone { 
+            height: 240px; 
+            display: flex; align-items: center; justify-content: center; 
+            background: rgba(0,0,0,0.2); 
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* ANİMASYONLU PTT BUTONU */
+        #main-btn {
+            width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(circle, #3a3a3a, #1a1a1a);
+            border: 4px solid #444;
+            color: #888; font-size: 20px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 5px 10px rgba(255,255,255,0.05);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+        
+        /* Basıldığında */
+        #main-btn.active { 
+            background: radial-gradient(circle, #ff4b1f, #ff9068);
+            border-color: #ff4b1f; 
+            color: white; 
+            transform: scale(0.95);
+            box-shadow: 0 0 30px rgba(255, 75, 31, 0.6);
+        }
+        
+        /* Pulse Animasyonu (Arkada halka büyümesi) */
+        #main-btn.active::after {
+            content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border-radius: 50%; border: 2px solid #ff4b1f;
+            animation: pulse 1s infinite; opacity: 0;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+
     </style>
 </head>
 <body>
 
     <div id="login-panel">
-        <h3 style="color:#0af;">Oda Adı:</h3>
-        <input type="text" id="room-input" placeholder="test99">
+        <h2>Telsiz Giriş</h2>
         
-        <p style="color:#aaa; font-size:12px;">Numaranı Seç:</p>
+        <input type="text" id="room-input" placeholder="Oda Adı (Örn: ekip99)">
+        
+        <p style="color:rgba(255,255,255,0.5); font-size:12px; margin-bottom:15px;">KİMLİĞİNİ SEÇ</p>
         <div class="grid-buttons">
-            <button class="btn-big" onclick="sec(1)">1. Kişi</button>
-            <button class="btn-big" onclick="sec(2)">2. Kişi</button>
-            <button class="btn-big" onclick="sec(3)">3. Kişi</button>
-            <button class="btn-big" onclick="sec(4)">4. Kişi</button>
+            <button class="btn-big" onclick="sec(1)">1. Yönetici</button>
+            <button class="btn-big" onclick="sec(2)">2. Saha</button>
+            <button class="btn-big" onclick="sec(3)">3. Saha</button>
+            <button class="btn-big" onclick="sec(4)">4. Merkez</button>
         </div>
-        <div style="color:#666; font-size:10px; margin-top:10px;">Düşük Veri Modu Aktif</div>
     </div>
 
     <div id="radio-panel">
-        <div style="padding:5px; background:#222; color:#0af; font-size:12px; font-weight:bold;" id="header-info">...</div>
+        <div class="top-bar">
+            <div id="header-info" class="room-badge">...</div>
+            <button class="refresh-btn" onclick="location.reload()">Sorun varsa yenile ↻</button>
+        </div>
         
         <div class="video-grid">
             <div class="vid-box" id="b1"><video id="v1" autoplay playsinline></video><span class="label">1</span></div>
@@ -82,10 +182,6 @@
             <div class="vid-box" id="b4"><video id="v4" autoplay playsinline></video><span class="label">4</span></div>
         </div>
         
-        <div style="text-align:center;">
-            <button onclick="location.reload()" style="background:#333; color:#fff; border:none; padding:5px 10px; font-size:10px;">Donarsa Buraya Bas (Yenile)</button>
-        </div>
-
         <div class="ptt-zone">
             <div id="main-btn">BAŞLATILIYOR</div>
         </div>
@@ -102,9 +198,7 @@
             myRoom = inputVal.toLowerCase().replace(/[^a-z0-9]/g, '');
             mySlot = no;
 
-            // --- PERFORMANS AYARI BURADA ---
-            // width: 240 -> Çok küçük ama çok hızlı
-            // frameRate: 15 -> Akıcı değil ama donmaz
+            // Performans ayarları (Donmama için)
             var videoConstraints = {
                 width: { ideal: 240 },
                 height: { ideal: 180 },
@@ -119,7 +213,7 @@
                 
                 document.getElementById('login-panel').style.display = 'none';
                 document.getElementById('radio-panel').style.display = 'flex';
-                document.getElementById('header-info').innerText = "Oda: " + myRoom + " | Ben: #" + no;
+                document.getElementById('header-info').innerText = myRoom.toUpperCase() + " | #" + no;
 
                 baslatPeer();
                 butonAyarla();
@@ -132,7 +226,6 @@
 
         function baslatPeer() {
             var id = myRoom + "_" + mySlot;
-            // Peer ayarları (Hız için)
             peer = new Peer(id, {
                 debug: 0,
                 config: { 'iceServers': [ { urls: 'stun:stun.l.google.com:19302' } ] } 
@@ -142,11 +235,12 @@
                 var v = document.getElementById('v' + mySlot);
                 v.srcObject = localStream;
                 v.muted = true;
-                document.getElementById('b' + mySlot).style.border = "3px solid #0af";
+                // Kendi kutumuzun kenarını mavi yapalım
+                document.getElementById('b' + mySlot).style.borderColor = "#00d2ff";
 
                 var btn = document.getElementById('main-btn');
                 btn.innerText = "BAS KONUŞ";
-                btn.style.color = "white";
+                btn.style.color = "#ccc";
 
                 peer.on('call', function(c) { c.answer(localStream); bagla(c); });
                 ara();
@@ -168,7 +262,7 @@
                     try { var c = peer.call(target, localStream); if(c) bagla(c, i); } catch(e){}
                 }
             }
-            setTimeout(ara, 4000); // Taramayı yavaşlattım (CPU tasarrufu)
+            setTimeout(ara, 4000); 
         }
 
         function bagla(call, manuelNo) {
