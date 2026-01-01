@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wp Telsiz v18 (Ses Fix)</title>
+    <title>Turbo Telsiz v19 (0 Gecikme)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Now+Display:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #111b21;
-            --header-color: #202c33;
+            --bg-color: #0b141a;
             --item-color: #202c33;
             --green-accent: #00a884;
             --text-primary: #e9edef;
@@ -22,7 +21,7 @@
         body { 
             background-color: var(--bg-color); 
             color: var(--text-primary); 
-            font-family: 'Roboto', Helvetica, Arial, sans-serif; 
+            font-family: 'Roboto', sans-serif; 
             margin: 0; display: flex; flex-direction: column; 
             height: 100vh; overflow: hidden; 
         }
@@ -33,23 +32,21 @@
             height: 100%; padding: 20px; z-index: 10; background: var(--bg-color);
         }
 
-        .wp-logo { font-size: 60px; color: var(--green-accent); margin-bottom: 20px; }
-
         input { 
-            background: var(--item-color); color: white; border: none; 
-            padding: 15px; width: 100%; max-width: 300px; 
-            border-radius: 20px; text-align: center; font-size: 18px; 
+            background: var(--item-color); color: white; border: 1px solid #333; 
+            padding: 15px; width: 100%; max-width: 250px; 
+            border-radius: 10px; text-align: center; font-size: 18px; 
             margin-bottom: 30px;
         }
 
         .user-select { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 350px; 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 300px; 
         }
         
         .btn-user { 
             background: var(--item-color); color: var(--text-secondary); 
-            padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);
-            font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center;
+            padding: 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);
+            font-weight: bold; cursor: pointer; text-align: center;
         }
         .btn-user:active { background: var(--green-accent); color: white; }
 
@@ -57,98 +54,92 @@
         #radio-panel { display: none; flex-direction: column; height: 100%; }
 
         .app-bar {
-            background: var(--header-color); padding: 10px 15px; 
+            background: var(--item-color); padding: 10px 15px; 
             display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            height: 60px;
+            height: 55px; border-bottom: 1px solid #333;
         }
-        .app-title { font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 10px; }
-        .room-tag { font-size: 12px; color: var(--text-secondary); }
 
         .user-list {
             flex-grow: 1; overflow-y: auto; padding: 10px;
-            display: flex; flex-direction: column; gap: 10px;
+            display: flex; flex-direction: column; gap: 8px;
         }
 
         .user-row {
             display: flex; align-items: center; 
-            background: transparent; 
-            padding: 5px; border-radius: 10px;
-            transition: 0.3s;
+            padding: 8px; border-radius: 8px;
+            background: rgba(255,255,255,0.02);
         }
         
         .avatar-wrapper {
-            width: 60px; height: 60px; border-radius: 50%; 
-            overflow: hidden; background: #333; flex-shrink: 0;
-            border: 2px solid transparent; position: relative;
+            width: 50px; height: 50px; border-radius: 50%; 
+            overflow: hidden; background: #000; flex-shrink: 0;
+            border: 2px solid #333; position: relative;
         }
         
-        /* ÖNEMLİ: muted kaldırıldı, JS ile kontrol edilecek */
+        /* PİKSELLEŞTİRME HİLESİ: Görüntüyü netleştirme, bırak pikselli kalsın, daha hızlı işlenir */
         video { 
             width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); 
-            filter: contrast(1.1);
+            image-rendering: pixelated; 
         }
 
-        .user-info { margin-left: 15px; flex-grow: 1; }
-        .u-name { font-weight: bold; font-size: 16px; color: var(--text-primary); }
-        .u-status { font-size: 13px; color: var(--text-secondary); }
+        .user-info { margin-left: 12px; flex-grow: 1; }
+        .u-name { font-weight: bold; font-size: 15px; color: var(--text-primary); }
+        .u-status { font-size: 12px; color: var(--text-secondary); }
 
         .user-row.talking .avatar-wrapper { border-color: var(--green-accent); }
         .user-row.talking .u-name { color: var(--green-accent); }
-        .user-row.talking .u-status { color: var(--green-accent); font-weight: bold; }
-        .user-row.me .avatar-wrapper { border-color: #00a884; } 
+        .user-row.talking .u-status { color: var(--green-accent); }
+        .user-row.me .avatar-wrapper { border-color: #0088cc; } 
 
         .bottom-bar {
-            background: var(--header-color); height: 140px; 
+            background: var(--item-color); height: 130px; 
             display: flex; align-items: center; justify-content: center;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            position: relative;
+            border-top: 1px solid #333; position: relative;
         }
 
         #mic-btn {
-            width: 90px; height: 90px; border-radius: 50%;
+            width: 80px; height: 80px; border-radius: 50%;
             background: var(--green-accent); 
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             cursor: pointer; user-select: none;
-            transition: transform 0.1s;
+            transition: transform 0.05s;
         }
         
-        .mic-icon { font-size: 40px; color: white; }
+        .mic-icon { font-size: 35px; color: white; }
 
         #mic-btn.active { 
-            transform: scale(1.2); background: #06cf9c; 
-            box-shadow: 0 0 30px rgba(0, 168, 132, 0.6);
+            transform: scale(1.1); background: #00ffaa; 
+            box-shadow: 0 0 20px #00ffaa;
         }
         
         .status-pill {
-            position: absolute; top: -30px; background: #000; 
-            padding: 5px 15px; border-radius: 20px; font-size: 12px;
-            opacity: 0.8; display: none;
+            position: absolute; top: -25px; background: #000; 
+            padding: 4px 12px; border-radius: 20px; font-size: 11px;
+            opacity: 0.9; display: none; color: #0f0;
         }
     </style>
 </head>
 <body>
 
     <div id="login-panel">
-        <div class="wp-logo">✆</div>
-        <h3 style="margin-top:0;">WhatsApp Telsiz</h3>
-        <p style="color:gray; font-size:12px;">Grup Adı:</p>
-        <input type="text" id="room-input" placeholder="Grup Adı (Örn: aile)">
-        <p style="color:gray; font-size:12px;">Sen Kimsin?</p>
+        <h3 style="color:var(--green-accent);">Turbo Telsiz</h3>
+        <p style="color:#666; font-size:12px;">Grup İsmi:</p>
+        <input type="text" id="room-input" placeholder="Grup">
+        <p style="color:#666; font-size:12px;">Numaranı Seç:</p>
         <div class="user-select">
-            <div class="btn-user" onclick="sec(1)">1. Kişi</div>
-            <div class="btn-user" onclick="sec(2)">2. Kişi</div>
-            <div class="btn-user" onclick="sec(3)">3. Kişi</div>
-            <div class="btn-user" onclick="sec(4)">4. Kişi</div>
+            <div class="btn-user" onclick="sec(1)">1</div>
+            <div class="btn-user" onclick="sec(2)">2</div>
+            <div class="btn-user" onclick="sec(3)">3</div>
+            <div class="btn-user" onclick="sec(4)">4</div>
         </div>
+        <div style="font-size:10px; color:#444; margin-top:20px;">Ultra Low Latency Mode</div>
     </div>
 
     <div id="radio-panel">
         <div class="app-bar">
-            <div class="app-title"><span style="color:var(--green-accent);">✆</span> <span id="header-title">Grup</span></div>
-            <div class="room-tag" id="header-room">...</div>
-            <div style="font-size:20px; cursor:pointer;" onclick="location.reload()">⋮</div>
+            <div style="font-weight:bold;">Grup: <span id="header-title" style="color:var(--green-accent)">...</span></div>
+            <div style="font-size:12px; color:#666;" id="header-room">#</div>
         </div>
 
         <div class="user-list">
@@ -171,7 +162,7 @@
         </div>
 
         <div class="bottom-bar">
-            <div class="status-pill" id="status-pill">SES GÖNDERİLİYOR...</div>
+            <div class="status-pill" id="status-pill">CANLI YAYINDA</div>
             <div id="mic-btn"><div class="mic-icon">🎙</div></div>
         </div>
     </div>
@@ -187,9 +178,17 @@
             myRoom = inputVal.toLowerCase().replace(/[^a-z0-9]/g, '');
             mySlot = no;
 
+            // --- HIZ AYARLARI (TURBO MOD) ---
+            // width: 150 -> Profil resmi kadar küçük (Veri tasarrufu MAX)
+            // frameRate: 10 -> Saniyede 10 kare (Az veri, hızlı iletim)
             var constraints = {
-                audio: true,
-                video: { width: 200, height: 200, frameRate: 15, facingMode: "user" }
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    latency: 0 // Mümkün olan en düşük ses gecikmesi
+                },
+                video: { width: 150, height: 150, frameRate: 10, facingMode: "user" }
             };
 
             navigator.mediaDevices.getUserMedia(constraints)
@@ -200,30 +199,37 @@
                 document.getElementById('login-panel').style.display = 'none';
                 document.getElementById('radio-panel').style.display = 'flex';
                 
-                document.getElementById('header-title').innerText = "Grup: " + inputVal;
+                document.getElementById('header-title').innerText = inputVal;
                 document.getElementById('header-room').innerText = "#" + mySlot;
 
                 baslatPeer();
                 butonAyarla();
             })
             .catch(function(err) {
-                alert("Kamera/Mikrofon izni verilmedi!");
+                alert("Hata: " + err);
                 location.reload();
             });
         }
 
         function baslatPeer() {
             var id = myRoom + "_" + mySlot;
-            peer = new Peer(id, { debug: 0 });
+            // PeerConfig: Google'ın hızlı STUN sunucularını kullan
+            peer = new Peer(id, { 
+                debug: 0,
+                config: {'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]}
+            });
 
             peer.on('open', function() {
                 var v = document.getElementById('v-' + mySlot);
                 v.srcObject = localStream;
-                v.muted = true; // SADECE KENDİ SESİMİZİ KAPATIYORUZ (Yankı olmasın diye)
+                v.muted = true; // Kendimizi duymayalım
                 
                 document.getElementById('row-' + mySlot).classList.add('me');
-                document.getElementById('st-' + mySlot).innerText = "Çevrimiçi (Sen)";
-                document.getElementById('st-' + mySlot).style.color = "#00a884";
+                document.getElementById('st-' + mySlot).innerText = "Sen";
+                document.getElementById('st-' + mySlot).style.color = "#0088cc";
 
                 peer.on('call', function(c) { c.answer(localStream); bagla(c); });
                 ara();
@@ -231,7 +237,7 @@
 
             peer.on('error', function(err) {
                 if(err.type == 'unavailable-id') {
-                    alert("Bu numara dolu! Başkasını seç.");
+                    alert("Bu numara dolu!");
                     location.reload();
                 }
             });
@@ -245,7 +251,8 @@
                     try { var c = peer.call(target, localStream); if(c) bagla(c, i); } catch(e){}
                 }
             }
-            setTimeout(ara, 4000); 
+            // Taramayı sıklaştır (Hızlı bulsun)
+            setTimeout(ara, 3000); 
         }
 
         function bagla(call, manuelNo) {
@@ -257,18 +264,10 @@
                     var v = document.getElementById('v-' + slot);
                     if(v) { 
                         v.srcObject = rs; 
-                        v.muted = false; // KARŞI TARAFIN SESİNİ AÇIYORUZ
-                        
-                        // Mobilde sesin çalması için küçük bir tetikleme
-                        var playPromise = v.play();
-                        if (playPromise !== undefined) {
-                            playPromise.catch(error => {
-                                console.log("Otomatik oynatma engellendi, etkileşim bekleniyor.");
-                            });
-                        }
-                        
+                        v.muted = false; // SESİ AÇ
+                        v.play().catch(e => console.log(e));
                         sesAnaliz(rs, slot);
-                        document.getElementById('st-' + slot).innerText = "Çevrimiçi";
+                        document.getElementById('st-' + slot).innerText = "Bağlandı";
                     }
                     conns[call.peer] = true;
                 }
@@ -276,7 +275,7 @@
             
             call.on('close', function() { 
                 delete conns[call.peer]; 
-                document.getElementById('st-' + slot).innerText = "Bağlantı koptu...";
+                document.getElementById('st-' + slot).innerText = "Koptu...";
                 var v = document.getElementById('v-' + slot);
                 if(v) v.srcObject = null;
             });
@@ -307,7 +306,7 @@
                         st.style.color = "#00a884";
                     } else {
                         row.classList.remove('talking');
-                        st.innerText = "Çevrimiçi";
+                        st.innerText = "Bağlı";
                         st.style.color = "#8696a0";
                     }
                     requestAnimationFrame(loop);
@@ -320,7 +319,6 @@
             var btn = document.getElementById('mic-btn');
             var pill = document.getElementById('status-pill');
             var myRow = document.getElementById('row-' + mySlot);
-            var mySt = document.getElementById('st-' + mySlot);
             
             function bas(e) {
                 if(e.cancelable) e.preventDefault();
@@ -329,7 +327,6 @@
                     btn.classList.add('active');
                     pill.style.display = 'block';
                     myRow.classList.add('talking');
-                    mySt.innerText = "Konuşuyorsun...";
                     if(navigator.vibrate) navigator.vibrate(50);
                 }
             }
@@ -340,7 +337,6 @@
                     btn.classList.remove('active');
                     pill.style.display = 'none';
                     myRow.classList.remove('talking');
-                    mySt.innerText = "Çevrimiçi (Sen)";
                 }
             }
             btn.addEventListener('mousedown', bas);
