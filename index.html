@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Görüntülü Telsiz v11</title>
+    <title>Telsiz v12 (TR Destekli)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { background-color: #111; color: white; font-family: sans-serif; text-align: center; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -16,53 +16,54 @@
         /* TELSİZ EKRANI */
         #screen-radio { display: none; flex-direction: column; height: 100%; }
         
-        /* VİDEO IZGARASI (GRID) */
+        /* BİLGİ ÇUBUĞU */
+        .top-bar { padding: 10px; background: #222; border-bottom: 1px solid #444; }
+        #my-full-id { color: #00ffcc; font-weight: bold; font-size: 14px; }
+        
+        /* VİDEO IZGARASI */
         .video-container {
             display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 10px; flex-grow: 1;
         }
-        
         .video-box {
-            width: 30%; height: 120px; background: #222; border-radius: 8px; position: relative; overflow: hidden; border: 2px solid #444; transition: 0.2s;
+            width: 30%; height: 120px; background: #000; border-radius: 8px; position: relative; overflow: hidden; border: 2px solid #333;
         }
-        
-        /* Mobil için biraz daha büyük */
-        @media (max-width: 600px) {
-            .video-box { width: 45%; height: 150px; }
-        }
+        @media (max-width: 600px) { .video-box { width: 45%; height: 150px; } }
 
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); /* Ayna modu */ }
-        
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         .label { position: absolute; bottom: 2px; left: 2px; font-size: 10px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 3px; }
-
-        /* Konuşurken Yanacak Yeşil Işık */
+        
+        /* Yeşil Işık Efekti */
         .video-box.talking { border-color: #0f0; box-shadow: 0 0 15px #0f0; }
         .video-box.me { border-color: #00aaff; }
 
-        /* BUTON ALANI */
-        .ptt-wrapper { height: 250px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border-top: 1px solid #333; }
-        
+        /* BUTON */
+        .ptt-wrapper { height: 220px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border-top: 1px solid #333; }
         #btn-ptt {
-            width: 180px; height: 180px; border-radius: 50%;
+            width: 160px; height: 160px; border-radius: 50%;
             background: #333; border: 6px solid #444;
             color: #aaa; font-size: 20px; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
-            user-select: none; -webkit-user-select: none; touch-action: manipulation;
+            user-select: none; -webkit-user-select: none;
             box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         }
-        #btn-ptt.active { background: #d00; color: white; border-color: #f00; box-shadow: 0 0 40px #d00; transform: scale(0.95); }
+        #btn-ptt.active { background: #d00; color: white; border-color: #f00; box-shadow: 0 0 40px #d00; }
     </style>
 </head>
 <body>
 
     <div id="screen-login">
-        <h2>Görüntülü Telsiz</h2>
-        <p style="color:#aaa;">Oda ismi girin:</p>
-        <input type="text" id="inp-room" placeholder="Örn: ekip34">
-        <button class="btn-main" onclick="baslat()">KAMERAYI AÇ VE BAĞLAN</button>
+        <h2>Telsiz v12</h2>
+        <p style="color:#aaa;">Oda ismi girin (Örn: ekip)</p>
+        <input type="text" id="inp-room" placeholder="Oda Adı">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;">Türkçe karakterler otomatik düzeltilir.</div>
+        <button class="btn-main" onclick="baslat()">BAĞLAN</button>
     </div>
 
     <div id="screen-radio">
-        <div style="padding: 5px; font-size: 12px; color: #666;" id="txt-room">Oda: ...</div>
+        <div class="top-bar">
+            <div id="my-full-id">ID Oluşturuluyor...</div>
+            <div id="status-txt" style="font-size:11px; color:#aaa; margin-top:3px;">Bağlantı bekleniyor...</div>
+        </div>
         
         <div class="video-container">
             <div class="video-box" id="box-1"><video id="v-1" autoplay playsinline></video><span class="label">1</span></div>
@@ -71,8 +72,6 @@
             <div class="video-box" id="box-4"><video id="v-4" autoplay playsinline></video><span class="label">4</span></div>
             <div class="video-box" id="box-5"><video id="v-5" autoplay playsinline></video><span class="label">5</span></div>
         </div>
-
-        <div id="status-txt" style="font-size:10px; color:orange; margin-bottom:5px;">Bağlanıyor...</div>
 
         <div class="ptt-wrapper">
             <div id="btn-ptt">BAŞLATILIYOR</div>
@@ -86,52 +85,64 @@
         var myRoom = "";
         var connections = {};
 
+        // Türkçe Karakter Düzeltici
+        function turkceTemizle(text) {
+            var trMap = {
+                'çÇ':'c', 'ğĞ':'g', 'şŞ':'s', 'üÜ':'u', 'ıİ':'i', 'öÖ':'o'
+            };
+            for(var key in trMap) {
+                text = text.replace(new RegExp('['+key+']','g'), trMap[key]);
+            }
+            return text.replace(/[^a-z0-9]/g, ''); // Sadece harf ve rakam kalsın
+        }
+
         function baslat() {
-            var val = document.getElementById('inp-room').value.trim();
-            if(!val) { alert("Oda adı yazın!"); return; }
+            var rawVal = document.getElementById('inp-room').value.toLowerCase();
+            if(!rawVal) { alert("Oda adı yazın!"); return; }
             
-            myRoom = val.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+            // Türkçe karakterleri düzelt
+            myRoom = turkceTemizle(rawVal);
             
             document.getElementById('screen-login').style.display = 'none';
             document.getElementById('screen-radio').style.display = 'flex';
-            document.getElementById('txt-room').innerText = "Oda: " + myRoom;
+            
+            // Kullanıcıya temizlenmiş oda adını gösterelim ki hata varsa anlasın
+            document.getElementById('status-txt').innerText = "Oda kodu: " + myRoom;
 
-            // KAMERA VE MİKROFON İZNİ (Video: true eklendi)
-            // Veri tasarrufu için düşük çözünürlük istiyoruz
-            navigator.mediaDevices.getUserMedia({ 
-                audio: true, 
-                video: { width: 320, height: 240, facingMode: "user" } 
-            }).then(function(stream) {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 320, height: 240, facingMode: "user" } })
+            .then(function(stream) {
                 localStream = stream;
-                localStream.getAudioTracks()[0].enabled = false; // Ses kapalı başla
-                
+                localStream.getAudioTracks()[0].enabled = false;
                 butonKurulumu();
                 yerBul(1);
-
             }).catch(function(err) {
-                alert("Kamera/Mikrofon izni verilmedi!");
+                alert("Kamera izni vermediniz!");
                 location.reload();
             });
         }
 
         function yerBul(no) {
-            if(no > 5) { alert("Oda dolu!"); location.reload(); return; }
-            document.getElementById('status-txt').innerText = "Koltuk #" + no + " kontrol ediliyor...";
+            if(no > 5) { alert("Oda dolu! Başka isim deneyin."); location.reload(); return; }
+            
+            document.getElementById('status-txt').innerText = "Koltuk #" + no + " deneniyor...";
             
             try {
                 var tempId = myRoom + "_" + no;
                 var tempPeer = new Peer(tempId);
-            } catch (e) { console.log(e); return; }
+            } catch (e) { return; }
 
             tempPeer.on('open', function(id) {
-                document.getElementById('status-txt').innerText = "Bağlandı: #" + no;
                 mySlot = no;
-                peer = tempPeer; 
+                peer = tempPeer;
                 
-                // Kendi görüntümüzü kutuya koyalım
-                var myVideo = document.getElementById('v-' + no);
-                myVideo.srcObject = localStream;
-                myVideo.muted = true; // Kendimizi duymayalım
+                // EKRANA KOCAMAN ID YAZ (Kontrol için)
+                document.getElementById('my-full-id').innerText = "BENİM ID: " + id;
+                document.getElementById('status-txt').innerText = "Bağlandı.";
+                
+                // Kendi videomuzu yerleştirelim
+                var v = document.getElementById('v-' + no);
+                v.srcObject = localStream;
+                v.muted = true;
                 document.getElementById('box-' + no).classList.add('me');
 
                 dinlemeyeBasla();
@@ -145,91 +156,75 @@
             tempPeer.on('error', function(err) {
                 if(err.type === 'unavailable-id') {
                     tempPeer.destroy();
-                    yerBul(no + 1);
+                    yerBul(no + 1); // Doluysa sonrakine geç
                 }
             });
         }
 
         function dinlemeyeBasla() {
-            if(!peer) return;
             peer.on('call', function(call) {
-                call.answer(localStream); // Gelen aramayı kendi görüntümüzle cevapla
+                call.answer(localStream);
                 videoBagla(call);
             });
         }
 
         function digerleriniAra() {
-            if(!peer || !localStream) return;
+            if(!peer) return;
             for(var i=1; i<=5; i++) {
                 if(i === mySlot) continue;
-                var hedef = myRoom + "_" + i;
-                if(!connections[hedef]) {
+                var target = myRoom + "_" + i;
+                if(!connections[target]) {
                     try {
-                        var call = peer.call(hedef, localStream);
+                        var call = peer.call(target, localStream);
                         if(call) videoBagla(call, i);
                     } catch(e) {}
                 }
             }
-            setTimeout(digerleriniAra, 4000); 
+            setTimeout(digerleriniAra, 4000);
         }
 
         function videoBagla(call, manuelNo) {
             var slot = manuelNo;
             if(!slot && call.peer) slot = parseInt(call.peer.split('_').pop());
 
-            call.on('stream', function(remoteStream) {
+            call.on('stream', function(rs) {
                 if(!connections[call.peer]) {
-                    // İlgili kutuyu bul
-                    var videoEl = document.getElementById('v-' + slot);
-                    var boxEl = document.getElementById('box-' + slot);
-                    
-                    if(videoEl) {
-                        videoEl.srcObject = remoteStream;
-                        // Video geldiğinde siyah kutu canlanacak
-                        
-                        // SES ANALİZİ (Konuşuyor mu?)
-                        // Bu kısım, karşı tarafın sesi gelince kutuyu yeşil yakmak için
-                        sesAnaliziYap(remoteStream, boxEl);
+                    var v = document.getElementById('v-' + slot);
+                    var b = document.getElementById('box-' + slot);
+                    if(v) {
+                        v.srcObject = rs;
+                        sesAnaliziYap(rs, b);
                     }
                     connections[call.peer] = true;
                 }
             });
-
             call.on('close', function() {
                 delete connections[call.peer];
-                // Görüntüyü temizle
-                var videoEl = document.getElementById('v-' + slot);
-                if(videoEl) videoEl.srcObject = null;
+                var v = document.getElementById('v-' + slot);
+                if(v) v.srcObject = null;
             });
+            call.on('error', function(e){});
         }
 
-        // Basit Ses Algılayıcı (Görsel efekt için)
-        function sesAnaliziYap(stream, boxElement) {
+        function sesAnaliziYap(stream, box) {
             try {
-                var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                var source = audioContext.createMediaStreamSource(stream);
-                var analyser = audioContext.createAnalyser();
-                analyser.fftSize = 32;
-                source.connect(analyser);
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var src = ctx.createMediaStreamSource(stream);
+                var anl = ctx.createAnalyser();
+                anl.fftSize = 32;
+                src.connect(anl);
+                var data = new Uint8Array(anl.frequencyBinCount);
                 
-                var dataArray = new Uint8Array(analyser.frequencyBinCount);
-                
-                function checkVolume() {
-                    analyser.getByteFrequencyData(dataArray);
+                function loop() {
+                    anl.getByteFrequencyData(data);
                     var sum = 0;
-                    for(var i=0; i<dataArray.length; i++) sum += dataArray[i];
-                    var average = sum / dataArray.length;
-                    
-                    // Eğer ses seviyesi belli bir eşiğin üstündeyse "talking" sınıfı ekle
-                    if(average > 10) {
-                        boxElement.classList.add('talking');
-                    } else {
-                        boxElement.classList.remove('talking');
-                    }
-                    requestAnimationFrame(checkVolume);
+                    for(var i=0; i<data.length; i++) sum += data[i];
+                    if((sum/data.length) > 10) box.classList.add('talking');
+                    else box.classList.remove('talking');
+                    requestAnimationFrame(loop);
                 }
-                checkVolume();
-            } catch(e) { console.log("AudioContext hatası (önemsiz)"); }
+                loop();
+            } catch(e){}
         }
 
         function butonKurulumu() {
@@ -238,28 +233,25 @@
             
             function bas(e) {
                 if(e.cancelable) e.preventDefault();
-                if(localStream && localStream.getAudioTracks().length > 0) {
-                    localStream.getAudioTracks()[0].enabled = true; // Sesi aç
+                if(localStream) {
+                    localStream.getAudioTracks()[0].enabled = true;
                     btn.classList.add('active');
-                    if(myBox) myBox.classList.add('talking'); // Kendi kutunu yak
+                    if(myBox) myBox.classList.add('talking');
                     if(navigator.vibrate) navigator.vibrate(50);
                 }
             }
-            
             function cek(e) {
                 if(e.cancelable) e.preventDefault();
-                if(localStream && localStream.getAudioTracks().length > 0) {
-                    localStream.getAudioTracks()[0].enabled = false; // Sesi kapat
+                if(localStream) {
+                    localStream.getAudioTracks()[0].enabled = false;
                     btn.classList.remove('active');
-                    if(myBox) myBox.classList.remove('talking'); // Kendi kutunu söndür
+                    if(myBox) myBox.classList.remove('talking');
                 }
             }
-
             btn.addEventListener('mousedown', bas);
             btn.addEventListener('mouseup', cek);
-            btn.addEventListener('mouseleave', cek);
-            btn.addEventListener('touchstart', bas, {passive: false});
-            btn.addEventListener('touchend', cek, {passive: false});
+            btn.addEventListener('touchstart', bas, {passive:false});
+            btn.addEventListener('touchend', cek, {passive:false});
         }
     </script>
 </body>
