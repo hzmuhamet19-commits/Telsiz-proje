@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wp Telsiz v17</title>
+    <title>Wp Telsiz v18 (Ses Fix)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Helvetica+Now+Display:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
-        /* WHATSAPP DARK THEME RENKLERİ */
         :root {
             --bg-color: #111b21;
             --header-color: #202c33;
@@ -16,7 +15,6 @@
             --green-accent: #00a884;
             --text-primary: #e9edef;
             --text-secondary: #8696a0;
-            --incoming-bubble: #202c33;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -35,9 +33,7 @@
             height: 100%; padding: 20px; z-index: 10; background: var(--bg-color);
         }
 
-        .wp-logo {
-            font-size: 60px; color: var(--green-accent); margin-bottom: 20px;
-        }
+        .wp-logo { font-size: 60px; color: var(--green-accent); margin-bottom: 20px; }
 
         input { 
             background: var(--item-color); color: white; border: none; 
@@ -53,14 +49,13 @@
         .btn-user { 
             background: var(--item-color); color: var(--text-secondary); 
             padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);
-            font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center;
         }
         .btn-user:active { background: var(--green-accent); color: white; }
 
-        /* TELSİZ EKRANI (LİSTE GÖRÜNÜMÜ) */
+        /* TELSİZ EKRANI */
         #radio-panel { display: none; flex-direction: column; height: 100%; }
 
-        /* Üst Bar */
         .app-bar {
             background: var(--header-color); padding: 10px 15px; 
             display: flex; align-items: center; justify-content: space-between;
@@ -70,7 +65,6 @@
         .app-title { font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 10px; }
         .room-tag { font-size: 12px; color: var(--text-secondary); }
 
-        /* Kullanıcı Listesi (Chat Listesi Gibi) */
         .user-list {
             flex-grow: 1; overflow-y: auto; padding: 10px;
             display: flex; flex-direction: column; gap: 10px;
@@ -83,13 +77,13 @@
             transition: 0.3s;
         }
         
-        /* Video Avatar (Yuvarlak) */
         .avatar-wrapper {
             width: 60px; height: 60px; border-radius: 50%; 
             overflow: hidden; background: #333; flex-shrink: 0;
             border: 2px solid transparent; position: relative;
         }
         
+        /* ÖNEMLİ: muted kaldırıldı, JS ile kontrol edilecek */
         video { 
             width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); 
             filter: contrast(1.1);
@@ -99,15 +93,11 @@
         .u-name { font-weight: bold; font-size: 16px; color: var(--text-primary); }
         .u-status { font-size: 13px; color: var(--text-secondary); }
 
-        /* Konuşunca Yanan Yeşil Halka */
         .user-row.talking .avatar-wrapper { border-color: var(--green-accent); }
         .user-row.talking .u-name { color: var(--green-accent); }
         .user-row.talking .u-status { color: var(--green-accent); font-weight: bold; }
-
-        /* Ben (Mavi Çerçeve) */
         .user-row.me .avatar-wrapper { border-color: #00a884; } 
 
-        /* ALT KONTROL (MİKROFON) */
         .bottom-bar {
             background: var(--header-color); height: 140px; 
             display: flex; align-items: center; justify-content: center;
@@ -115,7 +105,6 @@
             position: relative;
         }
 
-        /* Yüzen Dev Mikrofon Butonu */
         #mic-btn {
             width: 90px; height: 90px; border-radius: 50%;
             background: var(--green-accent); 
@@ -125,13 +114,10 @@
             transition: transform 0.1s;
         }
         
-        /* Mikrofon İkonu (CSS ile) */
         .mic-icon { font-size: 40px; color: white; }
 
-        /* Basınca Efekt */
         #mic-btn.active { 
-            transform: scale(1.2); 
-            background: #06cf9c; 
+            transform: scale(1.2); background: #06cf9c; 
             box-shadow: 0 0 30px rgba(0, 168, 132, 0.6);
         }
         
@@ -140,7 +126,6 @@
             padding: 5px 15px; border-radius: 20px; font-size: 12px;
             opacity: 0.8; display: none;
         }
-
     </style>
 </head>
 <body>
@@ -148,11 +133,9 @@
     <div id="login-panel">
         <div class="wp-logo">✆</div>
         <h3 style="margin-top:0;">WhatsApp Telsiz</h3>
-        <p style="color:gray; font-size:12px;">Grup Adı Girin:</p>
-        
+        <p style="color:gray; font-size:12px;">Grup Adı:</p>
         <input type="text" id="room-input" placeholder="Grup Adı (Örn: aile)">
-        
-        <p style="color:gray; font-size:12px;">Kişi Seç:</p>
+        <p style="color:gray; font-size:12px;">Sen Kimsin?</p>
         <div class="user-select">
             <div class="btn-user" onclick="sec(1)">1. Kişi</div>
             <div class="btn-user" onclick="sec(2)">2. Kişi</div>
@@ -163,55 +146,33 @@
 
     <div id="radio-panel">
         <div class="app-bar">
-            <div class="app-title">
-                <span style="color:var(--green-accent);">✆</span> 
-                <span id="header-title">Grup</span>
-            </div>
+            <div class="app-title"><span style="color:var(--green-accent);">✆</span> <span id="header-title">Grup</span></div>
             <div class="room-tag" id="header-room">...</div>
             <div style="font-size:20px; cursor:pointer;" onclick="location.reload()">⋮</div>
         </div>
 
         <div class="user-list">
-            
             <div class="user-row" id="row-1">
-                <div class="avatar-wrapper"><video id="v-1" autoplay playsinline muted></video></div>
-                <div class="user-info">
-                    <div class="u-name">1. Kişi</div>
-                    <div class="u-status" id="st-1">Bağlantı bekleniyor...</div>
-                </div>
+                <div class="avatar-wrapper"><video id="v-1" autoplay playsinline></video></div>
+                <div class="user-info"><div class="u-name">1. Kişi</div><div class="u-status" id="st-1">...</div></div>
             </div>
-
             <div class="user-row" id="row-2">
-                <div class="avatar-wrapper"><video id="v-2" autoplay playsinline muted></video></div>
-                <div class="user-info">
-                    <div class="u-name">2. Kişi</div>
-                    <div class="u-status" id="st-2">Bağlantı bekleniyor...</div>
-                </div>
+                <div class="avatar-wrapper"><video id="v-2" autoplay playsinline></video></div>
+                <div class="user-info"><div class="u-name">2. Kişi</div><div class="u-status" id="st-2">...</div></div>
             </div>
-
             <div class="user-row" id="row-3">
-                <div class="avatar-wrapper"><video id="v-3" autoplay playsinline muted></video></div>
-                <div class="user-info">
-                    <div class="u-name">3. Kişi</div>
-                    <div class="u-status" id="st-3">Bağlantı bekleniyor...</div>
-                </div>
+                <div class="avatar-wrapper"><video id="v-3" autoplay playsinline></video></div>
+                <div class="user-info"><div class="u-name">3. Kişi</div><div class="u-status" id="st-3">...</div></div>
             </div>
-
             <div class="user-row" id="row-4">
-                <div class="avatar-wrapper"><video id="v-4" autoplay playsinline muted></video></div>
-                <div class="user-info">
-                    <div class="u-name">4. Kişi</div>
-                    <div class="u-status" id="st-4">Bağlantı bekleniyor...</div>
-                </div>
+                <div class="avatar-wrapper"><video id="v-4" autoplay playsinline></video></div>
+                <div class="user-info"><div class="u-name">4. Kişi</div><div class="u-status" id="st-4">...</div></div>
             </div>
-
         </div>
 
         <div class="bottom-bar">
             <div class="status-pill" id="status-pill">SES GÖNDERİLİYOR...</div>
-            <div id="mic-btn">
-                <div class="mic-icon">🎙</div>
-            </div>
+            <div id="mic-btn"><div class="mic-icon">🎙</div></div>
         </div>
     </div>
 
@@ -226,8 +187,6 @@
             myRoom = inputVal.toLowerCase().replace(/[^a-z0-9]/g, '');
             mySlot = no;
 
-            // DONMAMA GARANTİSİ: Çok düşük veri modunda açıyoruz
-            // WhatsApp'taki küçük daire video için 150px kalite yeterli.
             var constraints = {
                 audio: true,
                 video: { width: 200, height: 200, frameRate: 15, facingMode: "user" }
@@ -248,7 +207,7 @@
                 butonAyarla();
             })
             .catch(function(err) {
-                alert("Kamera hatası: " + err);
+                alert("Kamera/Mikrofon izni verilmedi!");
                 location.reload();
             });
         }
@@ -258,11 +217,10 @@
             peer = new Peer(id, { debug: 0 });
 
             peer.on('open', function() {
-                // Kendi videomuzu yerleştir
                 var v = document.getElementById('v-' + mySlot);
                 v.srcObject = localStream;
+                v.muted = true; // SADECE KENDİ SESİMİZİ KAPATIYORUZ (Yankı olmasın diye)
                 
-                // Kendi satırımızı işaretle
                 document.getElementById('row-' + mySlot).classList.add('me');
                 document.getElementById('st-' + mySlot).innerText = "Çevrimiçi (Sen)";
                 document.getElementById('st-' + mySlot).style.color = "#00a884";
@@ -273,7 +231,7 @@
 
             peer.on('error', function(err) {
                 if(err.type == 'unavailable-id') {
-                    alert("Bu kişi zaten seçilmiş! Başkasını seç.");
+                    alert("Bu numara dolu! Başkasını seç.");
                     location.reload();
                 }
             });
@@ -299,15 +257,28 @@
                     var v = document.getElementById('v-' + slot);
                     if(v) { 
                         v.srcObject = rs; 
+                        v.muted = false; // KARŞI TARAFIN SESİNİ AÇIYORUZ
+                        
+                        // Mobilde sesin çalması için küçük bir tetikleme
+                        var playPromise = v.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.log("Otomatik oynatma engellendi, etkileşim bekleniyor.");
+                            });
+                        }
+                        
                         sesAnaliz(rs, slot);
                         document.getElementById('st-' + slot).innerText = "Çevrimiçi";
                     }
                     conns[call.peer] = true;
                 }
             });
+            
             call.on('close', function() { 
                 delete conns[call.peer]; 
                 document.getElementById('st-' + slot).innerText = "Bağlantı koptu...";
+                var v = document.getElementById('v-' + slot);
+                if(v) v.srcObject = null;
             });
             call.on('error', function(){});
         }
@@ -333,9 +304,11 @@
                     if((sum/data.length)>10) {
                         row.classList.add('talking');
                         st.innerText = "Konuşuyor...";
+                        st.style.color = "#00a884";
                     } else {
                         row.classList.remove('talking');
                         st.innerText = "Çevrimiçi";
+                        st.style.color = "#8696a0";
                     }
                     requestAnimationFrame(loop);
                 }
